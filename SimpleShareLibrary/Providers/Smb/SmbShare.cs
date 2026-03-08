@@ -187,14 +187,11 @@ namespace SimpleShareLibrary.Providers.Smb
         }
 
         /// <inheritdoc />
-        public Task<string> ReadAllTextAsync(string path, Encoding encoding = null, CancellationToken ct = default)
+        public async Task<string> ReadAllTextAsync(string path, Encoding encoding = null, CancellationToken ct = default)
         {
             ThrowIfDisposed();
-            return RetryHelper.ExecuteAsync(() => Task.Run(async () =>
-            {
-                var bytes = await ReadAllBytesAsync(path, ct).ConfigureAwait(false);
-                return (encoding ?? Encoding.UTF8).GetString(bytes);
-            }, ct), _resilience);
+            var bytes = await ReadAllBytesAsync(path, ct).ConfigureAwait(false);
+            return (encoding ?? Encoding.UTF8).GetString(bytes);
         }
 
         /// <inheritdoc />
@@ -263,11 +260,8 @@ namespace SimpleShareLibrary.Providers.Smb
         public Task WriteAllTextAsync(string path, string text, Encoding encoding = null, bool overwrite = true, CancellationToken ct = default)
         {
             ThrowIfDisposed();
-            return Task.Run(() =>
-            {
-                var bytes = (encoding ?? Encoding.UTF8).GetBytes(text);
-                return WriteAllBytesAsync(path, bytes, overwrite, ct);
-            }, ct);
+            var bytes = (encoding ?? Encoding.UTF8).GetBytes(text);
+            return WriteAllBytesAsync(path, bytes, overwrite, ct);
         }
 
         /// <inheritdoc />
@@ -304,23 +298,25 @@ namespace SimpleShareLibrary.Providers.Smb
         #region Copy
 
         /// <inheritdoc />
-        public Task CopyFileAsync(string src, string dst, CopyOptions options = null, CancellationToken ct = default)
+        public async Task CopyFileAsync(string src, string dst, CopyOptions options = null, CancellationToken ct = default)
         {
             ThrowIfDisposed();
-            return Task.Run(async () =>
+            ct.ThrowIfCancellationRequested();
+            options = options ?? new CopyOptions();
+
+            if (!options.Overwrite)
             {
-                ct.ThrowIfCancellationRequested();
-                options = options ?? new CopyOptions();
-
-                if (!options.Overwrite)
+                var exists = await ExistsAsync(dst, ct).ConfigureAwait(false);
+                if (exists)
                 {
-                    var exists = await ExistsAsync(dst, ct).ConfigureAwait(false);
-                    if (exists)
-                        throw new ShareAlreadyExistsException(dst);
+                    throw new ShareAlreadyExistsException(dst);
                 }
+            }
 
-                using (var readStream = await OpenReadAsync(src, ct).ConfigureAwait(false))
-                using (var writeStream = await OpenWriteAsync(dst, options.Overwrite, ct).ConfigureAwait(false))
+            using (var readStream = await OpenReadAsync(src, ct).ConfigureAwait(false))
+            using (var writeStream = await OpenWriteAsync(dst, options.Overwrite, ct).ConfigureAwait(false))
+            {
+                await Task.Run(() =>
                 {
                     var buffer = new byte[(int)_fileStore.MaxReadSize];
                     int bytesRead;
@@ -329,40 +325,37 @@ namespace SimpleShareLibrary.Providers.Smb
                         ct.ThrowIfCancellationRequested();
                         writeStream.Write(buffer, 0, bytesRead);
                     }
-                }
-            }, ct);
+                }, ct).ConfigureAwait(false);
+            }
         }
 
         /// <inheritdoc />
-        public Task CopyDirectoryAsync(string src, string dst, CopyOptions options = null, CancellationToken ct = default)
+        public async Task CopyDirectoryAsync(string src, string dst, CopyOptions options = null, CancellationToken ct = default)
         {
             ThrowIfDisposed();
-            return Task.Run(async () =>
+            ct.ThrowIfCancellationRequested();
+            options = options ?? new CopyOptions();
+
+            await EnsureDirectoryExistsAsync(dst, ct).ConfigureAwait(false);
+
+            var items = await ListAsync(src, "*", ct).ConfigureAwait(false);
+            foreach (var item in items)
             {
                 ct.ThrowIfCancellationRequested();
-                options = options ?? new CopyOptions();
+                var dstPath = PathHelper.Combine(dst, item.Name);
 
-                await EnsureDirectoryExistsAsync(dst, ct).ConfigureAwait(false);
-
-                var items = await ListAsync(src, "*", ct).ConfigureAwait(false);
-                foreach (var item in items)
+                if (item.IsDirectory)
                 {
-                    ct.ThrowIfCancellationRequested();
-                    var dstPath = PathHelper.Combine(dst, item.Name);
-
-                    if (item.IsDirectory)
+                    if (options.Recursive)
                     {
-                        if (options.Recursive)
-                        {
-                            await CopyDirectoryAsync(item.FullPath, dstPath, options, ct).ConfigureAwait(false);
-                        }
-                    }
-                    else
-                    {
-                        await CopyFileAsync(item.FullPath, dstPath, options, ct).ConfigureAwait(false);
+                        await CopyDirectoryAsync(item.FullPath, dstPath, options, ct).ConfigureAwait(false);
                     }
                 }
-            }, ct);
+                else
+                {
+                    await CopyFileAsync(item.FullPath, dstPath, options, ct).ConfigureAwait(false);
+                }
+            }
         }
 
         #endregion
@@ -370,47 +363,41 @@ namespace SimpleShareLibrary.Providers.Smb
         #region Move
 
         /// <inheritdoc />
-        public Task MoveFileAsync(string src, string dst, MoveOptions options = null, CancellationToken ct = default)
+        public async Task MoveFileAsync(string src, string dst, MoveOptions options = null, CancellationToken ct = default)
         {
             ThrowIfDisposed();
-            return Task.Run(async () =>
-            {
-                ct.ThrowIfCancellationRequested();
-                options = options ?? new MoveOptions();
+            ct.ThrowIfCancellationRequested();
+            options = options ?? new MoveOptions();
 
-                if (options.Safe)
-                {
-                    var copyOpts = new CopyOptions { Overwrite = options.Overwrite };
-                    await CopyFileAsync(src, dst, copyOpts, ct).ConfigureAwait(false);
-                    await DeleteFileAsync(src, ct).ConfigureAwait(false);
-                }
-                else
-                {
-                    RenameInternal(src, dst, options.Overwrite);
-                }
-            }, ct);
+            if (options.Safe)
+            {
+                var copyOpts = new CopyOptions { Overwrite = options.Overwrite };
+                await CopyFileAsync(src, dst, copyOpts, ct).ConfigureAwait(false);
+                await DeleteFileAsync(src, ct).ConfigureAwait(false);
+            }
+            else
+            {
+                await Task.Run(() => RenameInternal(src, dst, options.Overwrite), ct).ConfigureAwait(false);
+            }
         }
 
         /// <inheritdoc />
-        public Task MoveDirectoryAsync(string src, string dst, MoveOptions options = null, CancellationToken ct = default)
+        public async Task MoveDirectoryAsync(string src, string dst, MoveOptions options = null, CancellationToken ct = default)
         {
             ThrowIfDisposed();
-            return Task.Run(async () =>
-            {
-                ct.ThrowIfCancellationRequested();
-                options = options ?? new MoveOptions();
+            ct.ThrowIfCancellationRequested();
+            options = options ?? new MoveOptions();
 
-                if (options.Safe)
-                {
-                    var copyOpts = new CopyOptions { Overwrite = options.Overwrite, Recursive = options.Recursive };
-                    await CopyDirectoryAsync(src, dst, copyOpts, ct).ConfigureAwait(false);
-                    await DeleteDirectoryAsync(src, true, ct).ConfigureAwait(false);
-                }
-                else
-                {
-                    RenameInternal(src, dst, options.Overwrite);
-                }
-            }, ct);
+            if (options.Safe)
+            {
+                var copyOpts = new CopyOptions { Overwrite = options.Overwrite, Recursive = options.Recursive };
+                await CopyDirectoryAsync(src, dst, copyOpts, ct).ConfigureAwait(false);
+                await DeleteDirectoryAsync(src, true, ct).ConfigureAwait(false);
+            }
+            else
+            {
+                await Task.Run(() => RenameInternal(src, dst, options.Overwrite), ct).ConfigureAwait(false);
+            }
         }
 
         #endregion
@@ -443,63 +430,65 @@ namespace SimpleShareLibrary.Providers.Smb
         }
 
         /// <inheritdoc />
-        public Task DeleteDirectoryAsync(string path, bool recursive = false, CancellationToken ct = default)
+        public async Task DeleteDirectoryAsync(string path, bool recursive = false, CancellationToken ct = default)
         {
             ThrowIfDisposed();
-            return Task.Run(async () =>
+            ct.ThrowIfCancellationRequested();
+            var normalized = PathHelper.Normalize(path);
+
+            if (recursive)
             {
-                ct.ThrowIfCancellationRequested();
-                var normalized = PathHelper.Normalize(path);
-
-                if (recursive)
-                {
-                    var items = await ListAsync(path, "*", ct).ConfigureAwait(false);
-                    foreach (var item in items)
-                    {
-                        ct.ThrowIfCancellationRequested();
-                        if (item.IsDirectory)
-                            await DeleteDirectoryAsync(item.FullPath, true, ct).ConfigureAwait(false);
-                        else
-                            await DeleteFileAsync(item.FullPath, ct).ConfigureAwait(false);
-                    }
-                }
-
-                await RetryHelper.ExecuteAsync(() => Task.Run(() =>
-                {
-                    var status = _fileStore.CreateFile(
-                        out object handle,
-                        out FileStatus _,
-                        normalized,
-                        AccessMask.DELETE | AccessMask.SYNCHRONIZE,
-                        SMBLibrary.FileAttributes.Directory,
-                        ShareAccess.Read | ShareAccess.Write,
-                        CreateDisposition.FILE_OPEN,
-                        CreateOptions.FILE_DIRECTORY_FILE | CreateOptions.FILE_DELETE_ON_CLOSE,
-                        null);
-
-                    NTStatusMapper.ThrowOnFailure(status, normalized);
-                    _fileStore.CloseFile(handle);
-                }, ct), _resilience).ConfigureAwait(false);
-            }, ct);
-        }
-
-        /// <inheritdoc />
-        public Task DeleteAllAsync(string path, CancellationToken ct = default)
-        {
-            ThrowIfDisposed();
-            return Task.Run(async () =>
-            {
-                ct.ThrowIfCancellationRequested();
                 var items = await ListAsync(path, "*", ct).ConfigureAwait(false);
                 foreach (var item in items)
                 {
                     ct.ThrowIfCancellationRequested();
                     if (item.IsDirectory)
+                    {
                         await DeleteDirectoryAsync(item.FullPath, true, ct).ConfigureAwait(false);
+                    }
                     else
+                    {
                         await DeleteFileAsync(item.FullPath, ct).ConfigureAwait(false);
+                    }
                 }
-            }, ct);
+            }
+
+            await RetryHelper.ExecuteAsync(() => Task.Run(() =>
+            {
+                var status = _fileStore.CreateFile(
+                    out object handle,
+                    out FileStatus _,
+                    normalized,
+                    AccessMask.DELETE | AccessMask.SYNCHRONIZE,
+                    SMBLibrary.FileAttributes.Directory,
+                    ShareAccess.Read | ShareAccess.Write,
+                    CreateDisposition.FILE_OPEN,
+                    CreateOptions.FILE_DIRECTORY_FILE | CreateOptions.FILE_DELETE_ON_CLOSE,
+                    null);
+
+                NTStatusMapper.ThrowOnFailure(status, normalized);
+                _fileStore.CloseFile(handle);
+            }, ct), _resilience).ConfigureAwait(false);
+        }
+
+        /// <inheritdoc />
+        public async Task DeleteAllAsync(string path, CancellationToken ct = default)
+        {
+            ThrowIfDisposed();
+            ct.ThrowIfCancellationRequested();
+            var items = await ListAsync(path, "*", ct).ConfigureAwait(false);
+            foreach (var item in items)
+            {
+                ct.ThrowIfCancellationRequested();
+                if (item.IsDirectory)
+                {
+                    await DeleteDirectoryAsync(item.FullPath, true, ct).ConfigureAwait(false);
+                }
+                else
+                {
+                    await DeleteFileAsync(item.FullPath, ct).ConfigureAwait(false);
+                }
+            }
         }
 
         #endregion
