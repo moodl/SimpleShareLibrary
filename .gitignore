@@ -38,6 +38,7 @@ venv/
 ## Project
 INSTRUCTIONS.md
 claude-artifacts/
+SMBLibrary-ref/
 
 ## SSH keys and secrets
 id_rsa
