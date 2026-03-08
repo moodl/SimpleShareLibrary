@@ -27,3 +27,33 @@ x86/
 ## OS
 .DS_Store
 Thumbs.db
+
+## Environments
+.env
+.env.*
+.venv
+env/
+venv/
+
+## Project
+INSTRUCTIONS.md
+claude-artifacts/
+
+## SSH keys and secrets
+id_rsa
+id_ed25519
+id_ecdsa
+id_dsa
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.crt
+*.cer
+*.der
+credentials.json
+secrets.json
+service-account*.json
+*.secret
