@@ -1,0 +1,49 @@
+# SimpleSmbLibrary
+
+A simplified .NET Standard 2.0 wrapper around [SMBLibrary](https://github.com/TalAloni/SMBLibrary) by [Tal Aloni](https://github.com/TalAloni).
+
+## Why?
+
+SMBLibrary is a powerful, pure .NET SMB client/server implementation supporting SMB 1.0 through 3.1.1. However, its low-level API requires significant boilerplate for common operations. SimpleSmbLibrary provides an easy-to-use, optimistic API for everyday SMB file operations.
+
+**Before (SMBLibrary):**
+```csharp
+SMB2Client client = new SMB2Client();
+bool isConnected = client.Connect(IPAddress.Parse("192.168.1.11"), SMBTransportType.DirectTCPTransport);
+if (isConnected)
+{
+    NTStatus status = client.Login(String.Empty, "user", "pass");
+    if (status == NTStatus.STATUS_SUCCESS)
+    {
+        ISMBFileStore fileStore = client.TreeConnect("Share", out status);
+        if (status == NTStatus.STATUS_SUCCESS)
+        {
+            object fileHandle;
+            FileStatus fileStatus;
+            status = fileStore.CreateFile(out fileHandle, out fileStatus, "file.txt",
+                AccessMask.GENERIC_READ | AccessMask.SYNCHRONIZE, FileAttributes.Normal,
+                ShareAccess.Read, CreateDisposition.FILE_OPEN,
+                CreateOptions.FILE_NON_DIRECTORY_FILE | CreateOptions.FILE_SYNCHRONOUS_IO_ALERT, null);
+            // ... read loop, close, disconnect, logoff ...
+        }
+    }
+}
+```
+
+**After (SimpleSmbLibrary):**
+```csharp
+using (var smb = new SmbClient("192.168.1.11", "Share", "user", "pass"))
+{
+    byte[] data = smb.ReadFile("file.txt");
+}
+```
+
+## Installation
+
+```
+dotnet add package SimpleSmbLibrary
+```
+
+## Acknowledgments
+
+This library is built on top of [SMBLibrary](https://github.com/TalAloni/SMBLibrary) by **Tal Aloni** ([@TalAloni](https://github.com/TalAloni)), licensed under LGPL-3.0. All core SMB protocol implementation credit belongs to him and the SMBLibrary contributors.
