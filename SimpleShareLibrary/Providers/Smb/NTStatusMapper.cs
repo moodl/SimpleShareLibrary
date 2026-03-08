@@ -4,11 +4,19 @@ using SMBLibrary;
 
 namespace SimpleShareLibrary.Providers.Smb
 {
+    /// <summary>
+    /// Maps SMBLibrary <see cref="NTStatus"/> codes to protocol-agnostic
+    /// <see cref="ShareException"/> types, enabling provider-independent error handling.
+    /// </summary>
     internal static class NTStatusMapper
     {
         /// <summary>
-        /// Throws a protocol-agnostic exception if the NTStatus indicates failure.
+        /// Throws a protocol-agnostic exception if the <paramref name="status"/> indicates failure.
+        /// Does nothing when <paramref name="status"/> is <see cref="NTStatus.STATUS_SUCCESS"/>.
         /// </summary>
+        /// <param name="status">The SMB status code to evaluate.</param>
+        /// <param name="path">Optional file or directory path included in the exception message.</param>
+        /// <exception cref="ShareException">Thrown when <paramref name="status"/> is not <see cref="NTStatus.STATUS_SUCCESS"/>.</exception>
         internal static void ThrowOnFailure(NTStatus status, string path = null)
         {
             if (status == NTStatus.STATUS_SUCCESS)
@@ -18,8 +26,11 @@ namespace SimpleShareLibrary.Providers.Smb
         }
 
         /// <summary>
-        /// Returns true if the NTStatus represents a transient/retryable failure.
+        /// Determines whether the given <paramref name="status"/> represents a transient,
+        /// retryable failure (e.g. timeout, sharing violation, network loss).
         /// </summary>
+        /// <param name="status">The SMB status code to evaluate.</param>
+        /// <returns><c>true</c> if the status is transient and the operation may succeed on retry; otherwise <c>false</c>.</returns>
         internal static bool IsTransient(NTStatus status)
         {
             switch (status)
@@ -35,6 +46,12 @@ namespace SimpleShareLibrary.Providers.Smb
             }
         }
 
+        /// <summary>
+        /// Converts an <see cref="NTStatus"/> failure code into the appropriate <see cref="ShareException"/> subclass.
+        /// </summary>
+        /// <param name="status">The failing SMB status code.</param>
+        /// <param name="path">The file or directory path associated with the failure.</param>
+        /// <returns>A <see cref="ShareException"/> subclass matching the failure type.</returns>
         private static ShareException ToException(NTStatus status, string path)
         {
             switch (status)

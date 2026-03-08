@@ -40,7 +40,18 @@ namespace SimpleShareLibrary.Providers.Smb
 
         #region SMB IO Wrappers
 
-        /// <summary>Wraps <see cref="ISMBFileStore.CreateFile"/> in a <see cref="Task.Run(System.Func{TResult})"/> call.</summary>
+        /// <summary>
+        /// Asynchronously opens or creates a file or directory handle on the remote share.
+        /// Wraps the synchronous <see cref="ISMBFileStore.CreateFile"/> call.
+        /// </summary>
+        /// <param name="path">The normalized SMB path to the file or directory.</param>
+        /// <param name="accessMask">The desired access rights (e.g. read, write, delete).</param>
+        /// <param name="fileAttributes">The file attributes to apply (e.g. Normal, Directory).</param>
+        /// <param name="shareAccess">The sharing mode for concurrent access.</param>
+        /// <param name="disposition">Specifies how to handle existing/non-existing files (open, create, overwrite).</param>
+        /// <param name="createOptions">Additional options controlling file behavior (e.g. directory, delete-on-close).</param>
+        /// <param name="securityContext">Optional security context; typically <c>null</c>.</param>
+        /// <returns>A tuple containing the <see cref="NTStatus"/>, the opened file handle, and the resulting <see cref="FileStatus"/>.</returns>
         private Task<(NTStatus Status, object Handle, FileStatus FileStatus)> CreateFileAsync(
             string path,
             AccessMask accessMask,
@@ -67,13 +78,23 @@ namespace SimpleShareLibrary.Providers.Smb
             });
         }
 
-        /// <summary>Wraps <see cref="ISMBFileStore.CloseFile"/> in a <see cref="Task.Run(Action)"/> call.</summary>
+        /// <summary>
+        /// Asynchronously closes a previously opened file handle.
+        /// Wraps the synchronous <see cref="ISMBFileStore.CloseFile"/> call.
+        /// </summary>
+        /// <param name="handle">The file handle obtained from <see cref="CreateFileAsync"/>.</param>
         private Task CloseFileAsync(object handle)
         {
             return Task.Run(() => _fileStore.CloseFile(handle));
         }
 
-        /// <summary>Wraps <see cref="ISMBFileStore.GetFileInformation"/> in a <see cref="Task.Run(System.Func{TResult})"/> call.</summary>
+        /// <summary>
+        /// Asynchronously queries metadata for an open file handle.
+        /// Wraps the synchronous <see cref="ISMBFileStore.GetFileInformation"/> call.
+        /// </summary>
+        /// <param name="handle">The file handle obtained from <see cref="CreateFileAsync"/>.</param>
+        /// <param name="informationClass">The type of metadata to retrieve (e.g. <see cref="FileInformationClass.FileAllInformation"/>).</param>
+        /// <returns>A tuple containing the <see cref="NTStatus"/> and the retrieved <see cref="FileInformation"/>.</returns>
         private Task<(NTStatus Status, FileInformation Info)> GetFileInformationAsync(
             object handle,
             FileInformationClass informationClass)
@@ -89,7 +110,14 @@ namespace SimpleShareLibrary.Providers.Smb
             });
         }
 
-        /// <summary>Wraps <see cref="ISMBFileStore.QueryDirectory"/> in a <see cref="Task.Run(System.Func{TResult})"/> call.</summary>
+        /// <summary>
+        /// Asynchronously enumerates entries in a directory.
+        /// Wraps the synchronous <see cref="ISMBFileStore.QueryDirectory"/> call.
+        /// </summary>
+        /// <param name="handle">The directory handle obtained from <see cref="CreateFileAsync"/>.</param>
+        /// <param name="searchPattern">The wildcard pattern to filter entries (e.g. <c>"*"</c>).</param>
+        /// <param name="informationClass">The type of directory information to retrieve.</param>
+        /// <returns>A tuple containing the <see cref="NTStatus"/> and the list of directory entries.</returns>
         private Task<(NTStatus Status, List<QueryDirectoryFileInformation> Entries)> QueryDirectoryAsync(
             object handle,
             string searchPattern,
@@ -107,7 +135,13 @@ namespace SimpleShareLibrary.Providers.Smb
             });
         }
 
-        /// <summary>Wraps <see cref="ISMBFileStore.SetFileInformation"/> in a <see cref="Task.Run(System.Func{TResult})"/> call.</summary>
+        /// <summary>
+        /// Asynchronously sets metadata or performs operations (e.g. rename) on an open file handle.
+        /// Wraps the synchronous <see cref="ISMBFileStore.SetFileInformation"/> call.
+        /// </summary>
+        /// <param name="handle">The file handle obtained from <see cref="CreateFileAsync"/>.</param>
+        /// <param name="information">The file information to set (e.g. <see cref="FileRenameInformationType2"/>).</param>
+        /// <returns>The <see cref="NTStatus"/> indicating success or failure.</returns>
         private Task<NTStatus> SetFileInformationAsync(object handle, FileInformation information)
         {
             return Task.Run(() => _fileStore.SetFileInformation(handle, information));
@@ -607,6 +641,13 @@ namespace SimpleShareLibrary.Providers.Smb
 
         #region Private Helpers
 
+        /// <summary>
+        /// Lists the contents of a single directory, filtering entries by <paramref name="pattern"/>.
+        /// </summary>
+        /// <param name="normalizedPath">The normalized SMB directory path.</param>
+        /// <param name="pattern">A wildcard pattern to filter entries (e.g. <c>"*"</c>, <c>"*.txt"</c>).</param>
+        /// <returns>A read-only list of <see cref="ShareFileInfo"/> entries matching the pattern.</returns>
+        /// <exception cref="ShareDirectoryNotFoundException">Thrown when the directory does not exist.</exception>
         private async Task<IReadOnlyList<ShareFileInfo>> ListInternalAsync(string normalizedPath, string pattern)
         {
             var (status, handle, _) = await CreateFileAsync(
@@ -667,6 +708,13 @@ namespace SimpleShareLibrary.Providers.Smb
             }
         }
 
+        /// <summary>
+        /// Recursively lists all entries under a directory, accumulating matches into <paramref name="results"/>.
+        /// </summary>
+        /// <param name="normalizedPath">The normalized SMB directory path to start from.</param>
+        /// <param name="pattern">A wildcard pattern to filter entries.</param>
+        /// <param name="results">The accumulator list that matching entries are added to.</param>
+        /// <param name="ct">A cancellation token to observe between directory traversals.</param>
         private async Task ListRecursiveInternalAsync(string normalizedPath, string pattern, List<ShareFileInfo> results, CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
@@ -687,6 +735,13 @@ namespace SimpleShareLibrary.Providers.Smb
             }
         }
 
+        /// <summary>
+        /// Determines whether a file or directory name matches a simple wildcard pattern.
+        /// Supports <c>"*"</c>, <c>"*.*"</c>, and extension patterns like <c>"*.txt"</c>.
+        /// </summary>
+        /// <param name="name">The file or directory name to test.</param>
+        /// <param name="pattern">The wildcard pattern to match against.</param>
+        /// <returns><c>true</c> if <paramref name="name"/> matches <paramref name="pattern"/>; otherwise <c>false</c>.</returns>
         private static bool MatchesPattern(string name, string pattern)
         {
             if (pattern == "*" || pattern == "*.*")
@@ -701,6 +756,13 @@ namespace SimpleShareLibrary.Providers.Smb
             return string.Equals(name, pattern, StringComparison.OrdinalIgnoreCase);
         }
 
+        /// <summary>
+        /// Renames (moves) a file or directory on the remote share using SMB rename semantics.
+        /// </summary>
+        /// <param name="srcPath">The current path of the file or directory.</param>
+        /// <param name="dstPath">The desired new path.</param>
+        /// <param name="overwrite">If <c>true</c>, replaces an existing entry at <paramref name="dstPath"/>.</param>
+        /// <exception cref="ShareAlreadyExistsException">Thrown when <paramref name="overwrite"/> is <c>false</c> and the destination exists.</exception>
         private async Task RenameInternalAsync(string srcPath, string dstPath, bool overwrite)
         {
             var normalizedSrc = PathHelper.Normalize(srcPath);
@@ -734,6 +796,11 @@ namespace SimpleShareLibrary.Providers.Smb
             }
         }
 
+        /// <summary>
+        /// Creates a directory and all missing parent directories (like <c>mkdir -p</c>).
+        /// Uses <see cref="CreateDisposition.FILE_OPEN_IF"/> so existing directories are not an error.
+        /// </summary>
+        /// <param name="normalizedPath">The normalized SMB path for the directory to create.</param>
         private async Task CreateDirectoryRecursiveAsync(string normalizedPath)
         {
             if (string.IsNullOrEmpty(normalizedPath))
@@ -774,6 +841,12 @@ namespace SimpleShareLibrary.Providers.Smb
             await CloseFileAsync(handle).ConfigureAwait(false);
         }
 
+        /// <summary>
+        /// Creates a single directory without creating parent directories.
+        /// </summary>
+        /// <param name="normalizedPath">The normalized SMB path for the directory to create.</param>
+        /// <exception cref="ShareDirectoryNotFoundException">Thrown when the parent directory does not exist.</exception>
+        /// <exception cref="ShareAlreadyExistsException">Thrown when the directory already exists.</exception>
         private async Task CreateSingleDirectoryAsync(string normalizedPath)
         {
             var (status, handle, _) = await CreateFileAsync(
@@ -789,6 +862,12 @@ namespace SimpleShareLibrary.Providers.Smb
             await CloseFileAsync(handle).ConfigureAwait(false);
         }
 
+        /// <summary>
+        /// Converts SMBLibrary's <see cref="FileAllInformation"/> into a protocol-agnostic <see cref="ShareFileInfo"/>.
+        /// </summary>
+        /// <param name="fullPath">The full normalized path of the file or directory.</param>
+        /// <param name="info">The raw SMB file information to convert.</param>
+        /// <returns>A populated <see cref="ShareFileInfo"/> instance.</returns>
         private static ShareFileInfo ToShareFileInfo(string fullPath, FileAllInformation info)
         {
             var basicInfo = info.BasicInformation;
@@ -811,6 +890,10 @@ namespace SimpleShareLibrary.Providers.Smb
             };
         }
 
+        /// <summary>
+        /// Throws <see cref="ObjectDisposedException"/> if this instance has been disposed.
+        /// </summary>
+        /// <exception cref="ObjectDisposedException">Thrown when the share has been disposed.</exception>
         private void ThrowIfDisposed()
         {
             if (_disposed)
