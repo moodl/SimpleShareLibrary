@@ -13,7 +13,7 @@ namespace SimpleShareLibrary.Providers.Smb
 {
     /// <summary>
     /// SMB implementation of <see cref="IShare"/> using SMBLibrary.
-    /// All synchronous SMBLibrary calls are wrapped in <see cref="Task.Run(Action)"/> at the lowest level.
+    /// All synchronous SMBLibrary calls are wrapped in async helper methods via <see cref="Task.Run(Action)"/>.
     /// </summary>
     internal class SmbShare : IShare
     {
@@ -38,31 +38,106 @@ namespace SimpleShareLibrary.Providers.Smb
 
         #endregion
 
+        #region SMB IO Wrappers
+
+        /// <summary>Wraps <see cref="ISMBFileStore.CreateFile"/> in a <see cref="Task.Run(System.Func{TResult})"/> call.</summary>
+        private Task<(NTStatus Status, object Handle, FileStatus FileStatus)> CreateFileAsync(
+            string path,
+            AccessMask accessMask,
+            SMBLibrary.FileAttributes fileAttributes,
+            ShareAccess shareAccess,
+            CreateDisposition disposition,
+            CreateOptions createOptions,
+            SecurityContext securityContext)
+        {
+            return Task.Run(() =>
+            {
+                var status = _fileStore.CreateFile(
+                    out object handle,
+                    out FileStatus fileStatus,
+                    path,
+                    accessMask,
+                    fileAttributes,
+                    shareAccess,
+                    disposition,
+                    createOptions,
+                    securityContext);
+
+                return (status, handle, fileStatus);
+            });
+        }
+
+        /// <summary>Wraps <see cref="ISMBFileStore.CloseFile"/> in a <see cref="Task.Run(Action)"/> call.</summary>
+        private Task CloseFileAsync(object handle)
+        {
+            return Task.Run(() => _fileStore.CloseFile(handle));
+        }
+
+        /// <summary>Wraps <see cref="ISMBFileStore.GetFileInformation"/> in a <see cref="Task.Run(System.Func{TResult})"/> call.</summary>
+        private Task<(NTStatus Status, FileInformation Info)> GetFileInformationAsync(
+            object handle,
+            FileInformationClass informationClass)
+        {
+            return Task.Run(() =>
+            {
+                var status = _fileStore.GetFileInformation(
+                    out FileInformation fileInfo,
+                    handle,
+                    informationClass);
+
+                return (status, fileInfo);
+            });
+        }
+
+        /// <summary>Wraps <see cref="ISMBFileStore.QueryDirectory"/> in a <see cref="Task.Run(System.Func{TResult})"/> call.</summary>
+        private Task<(NTStatus Status, List<QueryDirectoryFileInformation> Entries)> QueryDirectoryAsync(
+            object handle,
+            string searchPattern,
+            FileInformationClass informationClass)
+        {
+            return Task.Run(() =>
+            {
+                var status = _fileStore.QueryDirectory(
+                    out List<QueryDirectoryFileInformation> entries,
+                    handle,
+                    searchPattern,
+                    informationClass);
+
+                return (status, entries);
+            });
+        }
+
+        /// <summary>Wraps <see cref="ISMBFileStore.SetFileInformation"/> in a <see cref="Task.Run(System.Func{TResult})"/> call.</summary>
+        private Task<NTStatus> SetFileInformationAsync(object handle, FileInformation information)
+        {
+            return Task.Run(() => _fileStore.SetFileInformation(handle, information));
+        }
+
+        #endregion
+
         #region Metadata & Listing
 
         /// <inheritdoc />
-        public Task<bool> ExistsAsync(string path, CancellationToken ct = default)
+        public async Task<bool> ExistsAsync(string path, CancellationToken ct = default)
         {
             ThrowIfDisposed();
-            return RetryHelper.ExecuteAsync(() => Task.Run(() =>
-            {
-                ct.ThrowIfCancellationRequested();
-                var normalized = PathHelper.Normalize(path);
+            ct.ThrowIfCancellationRequested();
+            var normalized = PathHelper.Normalize(path);
 
-                var status = _fileStore.CreateFile(
-                    out object handle,
-                    out FileStatus _,
+            return await RetryHelper.ExecuteAsync(async () =>
+            {
+                var (status, handle, _) = await CreateFileAsync(
                     normalized,
                     (AccessMask)0x00000080, // FILE_READ_ATTRIBUTES
                     0,
                     ShareAccess.Read | ShareAccess.Write,
                     CreateDisposition.FILE_OPEN,
                     0,
-                    null);
+                    null).ConfigureAwait(false);
 
                 if (status == NTStatus.STATUS_SUCCESS)
                 {
-                    _fileStore.CloseFile(handle);
+                    await CloseFileAsync(handle).ConfigureAwait(false);
                     return true;
                 }
 
@@ -74,73 +149,71 @@ namespace SimpleShareLibrary.Providers.Smb
 
                 NTStatusMapper.ThrowOnFailure(status, normalized);
                 return false;
-            }, ct), _resilience);
+            }, _resilience).ConfigureAwait(false);
         }
 
         /// <inheritdoc />
-        public Task<ShareFileInfo> GetInfoAsync(string path, CancellationToken ct = default)
+        public async Task<ShareFileInfo> GetInfoAsync(string path, CancellationToken ct = default)
         {
             ThrowIfDisposed();
-            return RetryHelper.ExecuteAsync(() => Task.Run(() =>
-            {
-                ct.ThrowIfCancellationRequested();
-                var normalized = PathHelper.Normalize(path);
+            ct.ThrowIfCancellationRequested();
+            var normalized = PathHelper.Normalize(path);
 
-                var status = _fileStore.CreateFile(
-                    out object handle,
-                    out FileStatus _,
+            return await RetryHelper.ExecuteAsync(async () =>
+            {
+                var (status, handle, _) = await CreateFileAsync(
                     normalized,
                     (AccessMask)0x00000080, // FILE_READ_ATTRIBUTES
                     0,
                     ShareAccess.Read | ShareAccess.Write,
                     CreateDisposition.FILE_OPEN,
                     0,
-                    null);
+                    null).ConfigureAwait(false);
 
                 NTStatusMapper.ThrowOnFailure(status, normalized);
 
                 try
                 {
-                    status = _fileStore.GetFileInformation(
-                        out FileInformation fileInfo,
+                    var (infoStatus, fileInfo) = await GetFileInformationAsync(
                         handle,
-                        FileInformationClass.FileAllInformation);
+                        FileInformationClass.FileAllInformation).ConfigureAwait(false);
 
-                    NTStatusMapper.ThrowOnFailure(status, normalized);
+                    NTStatusMapper.ThrowOnFailure(infoStatus, normalized);
 
                     return ToShareFileInfo(normalized, (FileAllInformation)fileInfo);
                 }
                 finally
                 {
-                    _fileStore.CloseFile(handle);
+                    await CloseFileAsync(handle).ConfigureAwait(false);
                 }
-            }, ct), _resilience);
+            }, _resilience).ConfigureAwait(false);
         }
 
         /// <inheritdoc />
-        public Task<IReadOnlyList<ShareFileInfo>> ListAsync(string path, string pattern = "*", CancellationToken ct = default)
+        public async Task<IReadOnlyList<ShareFileInfo>> ListAsync(string path, string pattern = "*", CancellationToken ct = default)
         {
             ThrowIfDisposed();
-            return RetryHelper.ExecuteAsync(() => Task.Run(() =>
-            {
-                ct.ThrowIfCancellationRequested();
-                var normalized = PathHelper.Normalize(path);
-                return ListInternal(normalized, pattern);
-            }, ct), _resilience);
+            ct.ThrowIfCancellationRequested();
+            var normalized = PathHelper.Normalize(path);
+
+            return await RetryHelper.ExecuteAsync(
+                () => ListInternalAsync(normalized, pattern),
+                _resilience).ConfigureAwait(false);
         }
 
         /// <inheritdoc />
-        public Task<IReadOnlyList<ShareFileInfo>> ListRecursiveAsync(string path, string pattern = "*", CancellationToken ct = default)
+        public async Task<IReadOnlyList<ShareFileInfo>> ListRecursiveAsync(string path, string pattern = "*", CancellationToken ct = default)
         {
             ThrowIfDisposed();
-            return RetryHelper.ExecuteAsync(() => Task.Run(() =>
+            ct.ThrowIfCancellationRequested();
+            var normalized = PathHelper.Normalize(path);
+
+            return await RetryHelper.ExecuteAsync(async () =>
             {
-                ct.ThrowIfCancellationRequested();
-                var normalized = PathHelper.Normalize(path);
                 var results = new List<ShareFileInfo>();
-                ListRecursiveInternal(normalized, pattern, results, ct);
+                await ListRecursiveInternalAsync(normalized, pattern, results, ct).ConfigureAwait(false);
                 return (IReadOnlyList<ShareFileInfo>)results;
-            }, ct), _resilience);
+            }, _resilience).ConfigureAwait(false);
         }
 
         #endregion
@@ -148,42 +221,43 @@ namespace SimpleShareLibrary.Providers.Smb
         #region Read
 
         /// <inheritdoc />
-        public Task<byte[]> ReadAllBytesAsync(string path, CancellationToken ct = default)
+        public async Task<byte[]> ReadAllBytesAsync(string path, CancellationToken ct = default)
         {
             ThrowIfDisposed();
-            return RetryHelper.ExecuteAsync(() => Task.Run(() =>
-            {
-                ct.ThrowIfCancellationRequested();
-                var normalized = PathHelper.Normalize(path);
+            ct.ThrowIfCancellationRequested();
+            var normalized = PathHelper.Normalize(path);
 
-                var status = _fileStore.CreateFile(
-                    out object handle,
-                    out FileStatus _,
+            return await RetryHelper.ExecuteAsync(async () =>
+            {
+                var (status, handle, _) = await CreateFileAsync(
                     normalized,
                     AccessMask.GENERIC_READ | AccessMask.SYNCHRONIZE,
                     SMBLibrary.FileAttributes.Normal,
                     ShareAccess.Read,
                     CreateDisposition.FILE_OPEN,
                     CreateOptions.FILE_NON_DIRECTORY_FILE | CreateOptions.FILE_SYNCHRONOUS_IO_ALERT,
-                    null);
+                    null).ConfigureAwait(false);
 
                 NTStatusMapper.ThrowOnFailure(status, normalized);
 
                 using (var stream = new SmbFileStream(_fileStore, handle, true, false))
                 {
-                    using (var ms = new MemoryStream())
+                    return await Task.Run(() =>
                     {
-                        var buffer = new byte[(int)_fileStore.MaxReadSize];
-                        int bytesRead;
-                        while ((bytesRead = stream.Read(buffer, 0, buffer.Length)) > 0)
+                        using (var ms = new MemoryStream())
                         {
-                            ct.ThrowIfCancellationRequested();
-                            ms.Write(buffer, 0, bytesRead);
+                            var buffer = new byte[(int)_fileStore.MaxReadSize];
+                            int bytesRead;
+                            while ((bytesRead = stream.Read(buffer, 0, buffer.Length)) > 0)
+                            {
+                                ct.ThrowIfCancellationRequested();
+                                ms.Write(buffer, 0, bytesRead);
+                            }
+                            return ms.ToArray();
                         }
-                        return ms.ToArray();
-                    }
+                    }, ct).ConfigureAwait(false);
                 }
-            }, ct), _resilience);
+            }, _resilience).ConfigureAwait(false);
         }
 
         /// <inheritdoc />
@@ -195,29 +269,27 @@ namespace SimpleShareLibrary.Providers.Smb
         }
 
         /// <inheritdoc />
-        public Task<Stream> OpenReadAsync(string path, CancellationToken ct = default)
+        public async Task<Stream> OpenReadAsync(string path, CancellationToken ct = default)
         {
             ThrowIfDisposed();
-            return RetryHelper.ExecuteAsync(() => Task.Run(() =>
-            {
-                ct.ThrowIfCancellationRequested();
-                var normalized = PathHelper.Normalize(path);
+            ct.ThrowIfCancellationRequested();
+            var normalized = PathHelper.Normalize(path);
 
-                var status = _fileStore.CreateFile(
-                    out object handle,
-                    out FileStatus _,
+            return await RetryHelper.ExecuteAsync(async () =>
+            {
+                var (status, handle, _) = await CreateFileAsync(
                     normalized,
                     AccessMask.GENERIC_READ | AccessMask.SYNCHRONIZE,
                     SMBLibrary.FileAttributes.Normal,
                     ShareAccess.Read,
                     CreateDisposition.FILE_OPEN,
                     CreateOptions.FILE_NON_DIRECTORY_FILE | CreateOptions.FILE_SYNCHRONOUS_IO_ALERT,
-                    null);
+                    null).ConfigureAwait(false);
 
                 NTStatusMapper.ThrowOnFailure(status, normalized);
 
                 return (Stream)new SmbFileStream(_fileStore, handle, true, false);
-            }, ct), _resilience);
+            }, _resilience).ConfigureAwait(false);
         }
 
         #endregion
@@ -225,35 +297,33 @@ namespace SimpleShareLibrary.Providers.Smb
         #region Write
 
         /// <inheritdoc />
-        public Task WriteAllBytesAsync(string path, byte[] data, bool overwrite = true, CancellationToken ct = default)
+        public async Task WriteAllBytesAsync(string path, byte[] data, bool overwrite = true, CancellationToken ct = default)
         {
             ThrowIfDisposed();
-            return RetryHelper.ExecuteAsync(() => Task.Run(() =>
-            {
-                ct.ThrowIfCancellationRequested();
-                var normalized = PathHelper.Normalize(path);
-                var disposition = overwrite
-                    ? CreateDisposition.FILE_OVERWRITE_IF
-                    : CreateDisposition.FILE_CREATE;
+            ct.ThrowIfCancellationRequested();
+            var normalized = PathHelper.Normalize(path);
+            var disposition = overwrite
+                ? CreateDisposition.FILE_OVERWRITE_IF
+                : CreateDisposition.FILE_CREATE;
 
-                var status = _fileStore.CreateFile(
-                    out object handle,
-                    out FileStatus _,
+            await RetryHelper.ExecuteAsync(async () =>
+            {
+                var (status, handle, _) = await CreateFileAsync(
                     normalized,
                     AccessMask.GENERIC_WRITE | AccessMask.SYNCHRONIZE,
                     SMBLibrary.FileAttributes.Normal,
                     ShareAccess.None,
                     disposition,
                     CreateOptions.FILE_NON_DIRECTORY_FILE | CreateOptions.FILE_SYNCHRONOUS_IO_ALERT,
-                    null);
+                    null).ConfigureAwait(false);
 
                 NTStatusMapper.ThrowOnFailure(status, normalized);
 
                 using (var stream = new SmbFileStream(_fileStore, handle, false, true))
                 {
-                    stream.Write(data, 0, data.Length);
+                    await Task.Run(() => stream.Write(data, 0, data.Length), ct).ConfigureAwait(false);
                 }
-            }, ct), _resilience);
+            }, _resilience).ConfigureAwait(false);
         }
 
         /// <inheritdoc />
@@ -265,32 +335,30 @@ namespace SimpleShareLibrary.Providers.Smb
         }
 
         /// <inheritdoc />
-        public Task<Stream> OpenWriteAsync(string path, bool overwrite = true, CancellationToken ct = default)
+        public async Task<Stream> OpenWriteAsync(string path, bool overwrite = true, CancellationToken ct = default)
         {
             ThrowIfDisposed();
-            return RetryHelper.ExecuteAsync(() => Task.Run(() =>
-            {
-                ct.ThrowIfCancellationRequested();
-                var normalized = PathHelper.Normalize(path);
-                var disposition = overwrite
-                    ? CreateDisposition.FILE_OVERWRITE_IF
-                    : CreateDisposition.FILE_CREATE;
+            ct.ThrowIfCancellationRequested();
+            var normalized = PathHelper.Normalize(path);
+            var disposition = overwrite
+                ? CreateDisposition.FILE_OVERWRITE_IF
+                : CreateDisposition.FILE_CREATE;
 
-                var status = _fileStore.CreateFile(
-                    out object handle,
-                    out FileStatus _,
+            return await RetryHelper.ExecuteAsync(async () =>
+            {
+                var (status, handle, _) = await CreateFileAsync(
                     normalized,
                     AccessMask.GENERIC_WRITE | AccessMask.SYNCHRONIZE,
                     SMBLibrary.FileAttributes.Normal,
                     ShareAccess.None,
                     disposition,
                     CreateOptions.FILE_NON_DIRECTORY_FILE | CreateOptions.FILE_SYNCHRONOUS_IO_ALERT,
-                    null);
+                    null).ConfigureAwait(false);
 
                 NTStatusMapper.ThrowOnFailure(status, normalized);
 
                 return (Stream)new SmbFileStream(_fileStore, handle, false, true);
-            }, ct), _resilience);
+            }, _resilience).ConfigureAwait(false);
         }
 
         #endregion
@@ -377,7 +445,7 @@ namespace SimpleShareLibrary.Providers.Smb
             }
             else
             {
-                await Task.Run(() => RenameInternal(src, dst, options.Overwrite), ct).ConfigureAwait(false);
+                await RenameInternalAsync(src, dst, options.Overwrite).ConfigureAwait(false);
             }
         }
 
@@ -396,7 +464,7 @@ namespace SimpleShareLibrary.Providers.Smb
             }
             else
             {
-                await Task.Run(() => RenameInternal(src, dst, options.Overwrite), ct).ConfigureAwait(false);
+                await RenameInternalAsync(src, dst, options.Overwrite).ConfigureAwait(false);
             }
         }
 
@@ -405,28 +473,26 @@ namespace SimpleShareLibrary.Providers.Smb
         #region Delete
 
         /// <inheritdoc />
-        public Task DeleteFileAsync(string path, CancellationToken ct = default)
+        public async Task DeleteFileAsync(string path, CancellationToken ct = default)
         {
             ThrowIfDisposed();
-            return RetryHelper.ExecuteAsync(() => Task.Run(() =>
-            {
-                ct.ThrowIfCancellationRequested();
-                var normalized = PathHelper.Normalize(path);
+            ct.ThrowIfCancellationRequested();
+            var normalized = PathHelper.Normalize(path);
 
-                var status = _fileStore.CreateFile(
-                    out object handle,
-                    out FileStatus _,
+            await RetryHelper.ExecuteAsync(async () =>
+            {
+                var (status, handle, _) = await CreateFileAsync(
                     normalized,
                     AccessMask.GENERIC_WRITE | AccessMask.DELETE | AccessMask.SYNCHRONIZE,
                     SMBLibrary.FileAttributes.Normal,
                     ShareAccess.None,
                     CreateDisposition.FILE_OPEN,
                     CreateOptions.FILE_NON_DIRECTORY_FILE | CreateOptions.FILE_DELETE_ON_CLOSE,
-                    null);
+                    null).ConfigureAwait(false);
 
                 NTStatusMapper.ThrowOnFailure(status, normalized);
-                _fileStore.CloseFile(handle);
-            }, ct), _resilience);
+                await CloseFileAsync(handle).ConfigureAwait(false);
+            }, _resilience).ConfigureAwait(false);
         }
 
         /// <inheritdoc />
@@ -453,22 +519,20 @@ namespace SimpleShareLibrary.Providers.Smb
                 }
             }
 
-            await RetryHelper.ExecuteAsync(() => Task.Run(() =>
+            await RetryHelper.ExecuteAsync(async () =>
             {
-                var status = _fileStore.CreateFile(
-                    out object handle,
-                    out FileStatus _,
+                var (status, handle, _) = await CreateFileAsync(
                     normalized,
                     AccessMask.DELETE | AccessMask.SYNCHRONIZE,
                     SMBLibrary.FileAttributes.Directory,
                     ShareAccess.Read | ShareAccess.Write,
                     CreateDisposition.FILE_OPEN,
                     CreateOptions.FILE_DIRECTORY_FILE | CreateOptions.FILE_DELETE_ON_CLOSE,
-                    null);
+                    null).ConfigureAwait(false);
 
                 NTStatusMapper.ThrowOnFailure(status, normalized);
-                _fileStore.CloseFile(handle);
-            }, ct), _resilience).ConfigureAwait(false);
+                await CloseFileAsync(handle).ConfigureAwait(false);
+            }, _resilience).ConfigureAwait(false);
         }
 
         /// <inheritdoc />
@@ -496,23 +560,23 @@ namespace SimpleShareLibrary.Providers.Smb
         #region Directories
 
         /// <inheritdoc />
-        public Task CreateDirectoryAsync(string path, bool createParents = true, CancellationToken ct = default)
+        public async Task CreateDirectoryAsync(string path, bool createParents = true, CancellationToken ct = default)
         {
             ThrowIfDisposed();
-            return RetryHelper.ExecuteAsync(() => Task.Run(() =>
-            {
-                ct.ThrowIfCancellationRequested();
-                var normalized = PathHelper.Normalize(path);
+            ct.ThrowIfCancellationRequested();
+            var normalized = PathHelper.Normalize(path);
 
+            await RetryHelper.ExecuteAsync(async () =>
+            {
                 if (createParents)
                 {
-                    CreateDirectoryRecursive(normalized);
+                    await CreateDirectoryRecursiveAsync(normalized).ConfigureAwait(false);
                 }
                 else
                 {
-                    CreateSingleDirectory(normalized);
+                    await CreateSingleDirectoryAsync(normalized).ConfigureAwait(false);
                 }
-            }, ct), _resilience);
+            }, _resilience).ConfigureAwait(false);
         }
 
         /// <inheritdoc />
@@ -526,50 +590,47 @@ namespace SimpleShareLibrary.Providers.Smb
         #region Rename
 
         /// <inheritdoc />
-        public Task RenameAsync(string path, string newName, CancellationToken ct = default)
+        public async Task RenameAsync(string path, string newName, CancellationToken ct = default)
         {
             ThrowIfDisposed();
-            return RetryHelper.ExecuteAsync(() => Task.Run(() =>
-            {
-                ct.ThrowIfCancellationRequested();
-                var normalized = PathHelper.Normalize(path);
-                var parent = PathHelper.GetParent(normalized);
-                var newPath = PathHelper.Combine(parent, newName);
-                RenameInternal(normalized, newPath, false);
-            }, ct), _resilience);
+            ct.ThrowIfCancellationRequested();
+            var normalized = PathHelper.Normalize(path);
+            var parent = PathHelper.GetParent(normalized);
+            var newPath = PathHelper.Combine(parent, newName);
+
+            await RetryHelper.ExecuteAsync(
+                () => RenameInternalAsync(normalized, newPath, false),
+                _resilience).ConfigureAwait(false);
         }
 
         #endregion
 
         #region Private Helpers
 
-        private IReadOnlyList<ShareFileInfo> ListInternal(string normalizedPath, string pattern)
+        private async Task<IReadOnlyList<ShareFileInfo>> ListInternalAsync(string normalizedPath, string pattern)
         {
-            var status = _fileStore.CreateFile(
-                out object handle,
-                out FileStatus _,
+            var (status, handle, _) = await CreateFileAsync(
                 normalizedPath,
                 AccessMask.GENERIC_READ,
                 SMBLibrary.FileAttributes.Directory,
                 ShareAccess.Read | ShareAccess.Write,
                 CreateDisposition.FILE_OPEN,
                 CreateOptions.FILE_DIRECTORY_FILE,
-                null);
+                null).ConfigureAwait(false);
 
             NTStatusMapper.ThrowOnFailure(status, normalizedPath);
 
             try
             {
-                status = _fileStore.QueryDirectory(
-                    out List<QueryDirectoryFileInformation> entries,
+                var (queryStatus, entries) = await QueryDirectoryAsync(
                     handle,
                     "*",
-                    FileInformationClass.FileDirectoryInformation);
+                    FileInformationClass.FileDirectoryInformation).ConfigureAwait(false);
 
-                if (status == NTStatus.STATUS_NO_MORE_FILES)
+                if (queryStatus == NTStatus.STATUS_NO_MORE_FILES)
                     return new List<ShareFileInfo>();
 
-                NTStatusMapper.ThrowOnFailure(status, normalizedPath);
+                NTStatusMapper.ThrowOnFailure(queryStatus, normalizedPath);
 
                 var results = new List<ShareFileInfo>();
                 foreach (var entry in entries)
@@ -602,31 +663,26 @@ namespace SimpleShareLibrary.Providers.Smb
             }
             finally
             {
-                _fileStore.CloseFile(handle);
+                await CloseFileAsync(handle).ConfigureAwait(false);
             }
         }
 
-        private void ListRecursiveInternal(string normalizedPath, string pattern, List<ShareFileInfo> results, CancellationToken ct)
+        private async Task ListRecursiveInternalAsync(string normalizedPath, string pattern, List<ShareFileInfo> results, CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
 
-            var allItems = ListInternal(normalizedPath, "*");
+            var allItems = await ListInternalAsync(normalizedPath, "*").ConfigureAwait(false);
 
             foreach (var item in allItems)
             {
                 ct.ThrowIfCancellationRequested();
 
+                if (MatchesPattern(item.Name, pattern))
+                    results.Add(item);
+
                 if (item.IsDirectory)
                 {
-                    if (MatchesPattern(item.Name, pattern))
-                        results.Add(item);
-
-                    ListRecursiveInternal(item.FullPath, pattern, results, ct);
-                }
-                else
-                {
-                    if (MatchesPattern(item.Name, pattern))
-                        results.Add(item);
+                    await ListRecursiveInternalAsync(item.FullPath, pattern, results, ct).ConfigureAwait(false);
                 }
             }
         }
@@ -645,21 +701,19 @@ namespace SimpleShareLibrary.Providers.Smb
             return string.Equals(name, pattern, StringComparison.OrdinalIgnoreCase);
         }
 
-        private void RenameInternal(string srcPath, string dstPath, bool overwrite)
+        private async Task RenameInternalAsync(string srcPath, string dstPath, bool overwrite)
         {
             var normalizedSrc = PathHelper.Normalize(srcPath);
             var normalizedDst = PathHelper.Normalize(dstPath);
 
-            var status = _fileStore.CreateFile(
-                out object handle,
-                out FileStatus _,
+            var (status, handle, _) = await CreateFileAsync(
                 normalizedSrc,
                 AccessMask.GENERIC_WRITE | AccessMask.DELETE | AccessMask.SYNCHRONIZE,
                 SMBLibrary.FileAttributes.Normal,
                 ShareAccess.None,
                 CreateDisposition.FILE_OPEN,
                 CreateOptions.FILE_SYNCHRONOUS_IO_ALERT,
-                null);
+                null).ConfigureAwait(false);
 
             NTStatusMapper.ThrowOnFailure(status, normalizedSrc);
 
@@ -671,69 +725,68 @@ namespace SimpleShareLibrary.Providers.Smb
                     ReplaceIfExists = overwrite
                 };
 
-                status = _fileStore.SetFileInformation(handle, renameInfo);
-                NTStatusMapper.ThrowOnFailure(status, normalizedSrc);
+                var setStatus = await SetFileInformationAsync(handle, renameInfo).ConfigureAwait(false);
+                NTStatusMapper.ThrowOnFailure(setStatus, normalizedSrc);
             }
             finally
             {
-                _fileStore.CloseFile(handle);
+                await CloseFileAsync(handle).ConfigureAwait(false);
             }
         }
 
-        private void CreateDirectoryRecursive(string normalizedPath)
+        private async Task CreateDirectoryRecursiveAsync(string normalizedPath)
         {
             if (string.IsNullOrEmpty(normalizedPath))
                 return;
 
-            var status = _fileStore.CreateFile(
-                out object handle,
-                out FileStatus fileStatus,
+            var (status, handle, _) = await CreateFileAsync(
                 normalizedPath,
                 AccessMask.GENERIC_READ,
                 SMBLibrary.FileAttributes.Directory,
                 ShareAccess.Read | ShareAccess.Write,
                 CreateDisposition.FILE_OPEN_IF,
                 CreateOptions.FILE_DIRECTORY_FILE,
-                null);
+                null).ConfigureAwait(false);
 
             if (status == NTStatus.STATUS_OBJECT_PATH_NOT_FOUND)
             {
                 var parent = PathHelper.GetParent(normalizedPath);
                 if (!string.IsNullOrEmpty(parent))
                 {
-                    CreateDirectoryRecursive(parent);
-                    status = _fileStore.CreateFile(
-                        out handle,
-                        out fileStatus,
+                    await CreateDirectoryRecursiveAsync(parent).ConfigureAwait(false);
+
+                    var (retryStatus, retryHandle, _) = await CreateFileAsync(
                         normalizedPath,
                         AccessMask.GENERIC_READ,
                         SMBLibrary.FileAttributes.Directory,
                         ShareAccess.Read | ShareAccess.Write,
                         CreateDisposition.FILE_OPEN_IF,
                         CreateOptions.FILE_DIRECTORY_FILE,
-                        null);
+                        null).ConfigureAwait(false);
+
+                    NTStatusMapper.ThrowOnFailure(retryStatus, normalizedPath);
+                    await CloseFileAsync(retryHandle).ConfigureAwait(false);
+                    return;
                 }
             }
 
             NTStatusMapper.ThrowOnFailure(status, normalizedPath);
-            _fileStore.CloseFile(handle);
+            await CloseFileAsync(handle).ConfigureAwait(false);
         }
 
-        private void CreateSingleDirectory(string normalizedPath)
+        private async Task CreateSingleDirectoryAsync(string normalizedPath)
         {
-            var status = _fileStore.CreateFile(
-                out object handle,
-                out FileStatus _,
+            var (status, handle, _) = await CreateFileAsync(
                 normalizedPath,
                 AccessMask.GENERIC_READ,
                 SMBLibrary.FileAttributes.Directory,
                 ShareAccess.Read | ShareAccess.Write,
                 CreateDisposition.FILE_CREATE,
                 CreateOptions.FILE_DIRECTORY_FILE,
-                null);
+                null).ConfigureAwait(false);
 
             NTStatusMapper.ThrowOnFailure(status, normalizedPath);
-            _fileStore.CloseFile(handle);
+            await CloseFileAsync(handle).ConfigureAwait(false);
         }
 
         private static ShareFileInfo ToShareFileInfo(string fullPath, FileAllInformation info)

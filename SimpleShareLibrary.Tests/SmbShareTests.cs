@@ -298,7 +298,7 @@ public class SmbShareTests
     {
         using var cts = new CancellationTokenSource();
         cts.Cancel();
-        await Assert.ThrowsExceptionAsync<TaskCanceledException>(() => _share.ExistsAsync("test.txt", cts.Token));
+        await Assert.ThrowsExceptionAsync<OperationCanceledException>(() => _share.ExistsAsync("test.txt", cts.Token));
     }
 
     [TestMethod]
@@ -306,7 +306,7 @@ public class SmbShareTests
     {
         using var cts = new CancellationTokenSource();
         cts.Cancel();
-        await Assert.ThrowsExceptionAsync<TaskCanceledException>(() => _share.ReadAllBytesAsync("test.txt", cts.Token));
+        await Assert.ThrowsExceptionAsync<OperationCanceledException>(() => _share.ReadAllBytesAsync("test.txt", cts.Token));
     }
 
     #endregion
