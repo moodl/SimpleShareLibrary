@@ -6,11 +6,13 @@ using SMBLibrary.Client;
 namespace SimpleShareLibrary.Providers.Smb
 {
     /// <summary>
-    /// A Stream implementation that reads/writes over SMB using chunked I/O.
+    /// A <see cref="Stream"/> implementation that reads/writes over SMB using chunked I/O.
     /// The underlying file handle is managed internally and closed on dispose.
     /// </summary>
     internal class SmbFileStream : Stream
     {
+        #region Fields
+
         private readonly ISMBFileStore _fileStore;
         private readonly object _handle;
         private readonly bool _canRead;
@@ -20,6 +22,15 @@ namespace SimpleShareLibrary.Providers.Smb
         private long _position;
         private bool _disposed;
 
+        #endregion
+
+        #region Constructors
+
+        /// <summary>Initializes a new instance wrapping an SMB file handle.</summary>
+        /// <param name="fileStore">The SMB file store that owns the handle.</param>
+        /// <param name="handle">The open file handle.</param>
+        /// <param name="canRead">Whether the stream supports reading.</param>
+        /// <param name="canWrite">Whether the stream supports writing.</param>
         internal SmbFileStream(ISMBFileStore fileStore, object handle, bool canRead, bool canWrite)
         {
             _fileStore = fileStore ?? throw new ArgumentNullException(nameof(fileStore));
@@ -31,18 +42,34 @@ namespace SimpleShareLibrary.Providers.Smb
             _position = 0;
         }
 
+        #endregion
+
+        #region Stream Properties
+
+        /// <inheritdoc />
         public override bool CanRead => _canRead && !_disposed;
+
+        /// <inheritdoc />
         public override bool CanWrite => _canWrite && !_disposed;
+
+        /// <inheritdoc />
         public override bool CanSeek => true;
 
+        /// <inheritdoc />
         public override long Length => throw new NotSupportedException("SMB streams do not support Length.");
 
+        /// <inheritdoc />
         public override long Position
         {
             get => _position;
             set => _position = value;
         }
 
+        #endregion
+
+        #region Stream Methods
+
+        /// <inheritdoc />
         public override int Read(byte[] buffer, int offset, int count)
         {
             ThrowIfDisposed();
@@ -74,6 +101,7 @@ namespace SimpleShareLibrary.Providers.Smb
             return totalRead;
         }
 
+        /// <inheritdoc />
         public override void Write(byte[] buffer, int offset, int count)
         {
             ThrowIfDisposed();
@@ -95,6 +123,7 @@ namespace SimpleShareLibrary.Providers.Smb
             }
         }
 
+        /// <inheritdoc />
         public override long Seek(long offset, SeekOrigin origin)
         {
             ThrowIfDisposed();
@@ -114,17 +143,24 @@ namespace SimpleShareLibrary.Providers.Smb
             return _position;
         }
 
+        /// <inheritdoc />
         public override void Flush()
         {
             ThrowIfDisposed();
             _fileStore.FlushFileBuffers(_handle);
         }
 
+        /// <inheritdoc />
         public override void SetLength(long value)
         {
             throw new NotSupportedException("SMB streams do not support SetLength.");
         }
 
+        #endregion
+
+        #region IDisposable
+
+        /// <inheritdoc />
         protected override void Dispose(bool disposing)
         {
             if (!_disposed)
@@ -138,10 +174,16 @@ namespace SimpleShareLibrary.Providers.Smb
             base.Dispose(disposing);
         }
 
+        #endregion
+
+        #region Private Helpers
+
         private void ThrowIfDisposed()
         {
             if (_disposed)
                 throw new ObjectDisposedException(nameof(SmbFileStream));
         }
+
+        #endregion
     }
 }

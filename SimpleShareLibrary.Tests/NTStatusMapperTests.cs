@@ -7,7 +7,7 @@ namespace SimpleShareLibrary.Tests;
 [TestClass]
 public class NTStatusMapperTests
 {
-    // ── ThrowOnFailure ───────────────────────────────────
+    #region ThrowOnFailure
 
     [TestMethod]
     public void ThrowOnFailure_Success_DoesNotThrow()
@@ -109,7 +109,9 @@ public class NTStatusMapperTests
         Assert.AreEqual("unknown", ex.Path);
     }
 
-    // ── IsTransient ──────────────────────────────────────
+    #endregion
+
+    #region IsTransient
 
     [TestMethod]
     [DataRow(NTStatus.STATUS_IO_TIMEOUT)]
@@ -131,4 +133,6 @@ public class NTStatusMapperTests
     {
         Assert.IsFalse(NTStatusMapper.IsTransient(status));
     }
+
+    #endregion
 }

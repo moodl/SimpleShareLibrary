@@ -20,7 +20,7 @@ public class SmbShareClientTests
         _client = new SmbShareClient(_mockClient.Object);
     }
 
-    // ── IsConnected ──────────────────────────────────────
+    #region IsConnected
 
     [TestMethod]
     public void IsConnected_DelegatesToClient()
@@ -31,7 +31,9 @@ public class SmbShareClientTests
         Assert.IsFalse(_client.IsConnected);
     }
 
-    // ── ListSharesAsync ──────────────────────────────────
+    #endregion
+
+    #region ListSharesAsync
 
     [TestMethod]
     public async Task ListSharesAsync_ReturnsShareNames()
@@ -58,7 +60,9 @@ public class SmbShareClientTests
             () => _client.ListSharesAsync());
     }
 
-    // ── OpenShareAsync ───────────────────────────────────
+    #endregion
+
+    #region OpenShareAsync
 
     [TestMethod]
     public async Task OpenShareAsync_Success_ReturnsIShare()
@@ -99,7 +103,9 @@ public class SmbShareClientTests
             () => _client.OpenShareAsync("BadShare"));
     }
 
-    // ── Dispose ──────────────────────────────────────────
+    #endregion
+
+    #region Dispose
 
     [TestMethod]
     public void Dispose_CallsLogoffAndDisconnect()
@@ -148,7 +154,9 @@ public class SmbShareClientTests
             () => _client.OpenShareAsync("test"));
     }
 
-    // ── CancellationToken ────────────────────────────────
+    #endregion
+
+    #region CancellationToken
 
     [TestMethod]
     public async Task ListSharesAsync_Cancelled_ThrowsTaskCanceledException()
@@ -159,4 +167,6 @@ public class SmbShareClientTests
         await Assert.ThrowsExceptionAsync<TaskCanceledException>(
             () => _client.ListSharesAsync(cts.Token));
     }
+
+    #endregion
 }

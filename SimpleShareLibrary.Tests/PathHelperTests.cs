@@ -5,7 +5,7 @@ namespace SimpleShareLibrary.Tests;
 [TestClass]
 public class PathHelperTests
 {
-    // ── Normalize ────────────────────────────────────────
+    #region Normalize
 
     [TestMethod]
     public void Normalize_ForwardSlashes_ReplacedWithBackslashes()
@@ -39,7 +39,9 @@ public class PathHelperTests
         Assert.AreEqual("file.txt", PathHelper.Normalize("file.txt"));
     }
 
-    // ── Combine ──────────────────────────────────────────
+    #endregion
+
+    #region Combine
 
     [TestMethod]
     public void Combine_TwoSegments_JoinedWithBackslash()
@@ -71,7 +73,9 @@ public class PathHelperTests
         Assert.AreEqual(string.Empty, PathHelper.Combine("", ""));
     }
 
-    // ── GetParent ────────────────────────────────────────
+    #endregion
+
+    #region GetParent
 
     [TestMethod]
     public void GetParent_NestedPath_ReturnsParent()
@@ -97,7 +101,9 @@ public class PathHelperTests
         Assert.AreEqual("folder", PathHelper.GetParent("folder/file.txt"));
     }
 
-    // ── GetName ──────────────────────────────────────────
+    #endregion
+
+    #region GetName
 
     [TestMethod]
     public void GetName_WithPath_ReturnsLastSegment()
@@ -122,4 +128,6 @@ public class PathHelperTests
     {
         Assert.AreEqual("file.txt", PathHelper.GetName("folder/file.txt"));
     }
+
+    #endregion
 }

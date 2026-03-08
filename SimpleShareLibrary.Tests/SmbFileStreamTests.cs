@@ -19,7 +19,7 @@ public class SmbFileStreamTests
         _mockStore.Setup(s => s.MaxWriteSize).Returns(4096);
     }
 
-    // ── Read ─────────────────────────────────────────────
+    #region Read
 
     [TestMethod]
     public void Read_SingleChunk_ReturnsData()
@@ -60,7 +60,9 @@ public class SmbFileStreamTests
         Assert.ThrowsException<NotSupportedException>(() => stream.Read(new byte[10], 0, 10));
     }
 
-    // ── Write ────────────────────────────────────────────
+    #endregion
+
+    #region Write
 
     [TestMethod]
     public void Write_SingleChunk_WritesData()
@@ -91,7 +93,9 @@ public class SmbFileStreamTests
         Assert.ThrowsException<NotSupportedException>(() => stream.Write(new byte[5], 0, 5));
     }
 
-    // ── Position & Seek ──────────────────────────────────
+    #endregion
+
+    #region Position & Seek
 
     [TestMethod]
     public void Position_TracksReadsAndWrites()
@@ -135,7 +139,9 @@ public class SmbFileStreamTests
         Assert.ThrowsException<NotSupportedException>(() => stream.Seek(0, SeekOrigin.End));
     }
 
-    // ── Dispose ──────────────────────────────────────────
+    #endregion
+
+    #region Dispose
 
     [TestMethod]
     public void Dispose_ClosesFileHandle()
@@ -165,7 +171,9 @@ public class SmbFileStreamTests
         Assert.ThrowsException<ObjectDisposedException>(() => stream.Read(new byte[10], 0, 10));
     }
 
-    // ── Properties ───────────────────────────────────────
+    #endregion
+
+    #region Properties
 
     [TestMethod]
     public void CanSeek_ReturnsTrue()
@@ -188,8 +196,12 @@ public class SmbFileStreamTests
         Assert.ThrowsException<NotSupportedException>(() => stream.SetLength(100));
     }
 
-    // ── Delegates for Moq out parameters ─────────────────
+    #endregion
+
+    #region Delegates
 
     private delegate void ReadFileCallbackVoid(out byte[] data, object handle, long offset, int count);
     private delegate void WriteFileCallbackVoid(out int bytesWritten, object handle, long offset, byte[] data);
+
+    #endregion
 }

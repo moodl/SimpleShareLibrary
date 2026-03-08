@@ -11,26 +11,36 @@ using SMBLibrary.Client;
 
 namespace SimpleShareLibrary.Providers.Smb
 {
+    /// <summary>
+    /// SMB implementation of <see cref="IShare"/> using SMBLibrary.
+    /// All synchronous SMBLibrary calls are wrapped in <see cref="Task.Run(Action)"/> at the lowest level.
+    /// </summary>
     internal class SmbShare : IShare
     {
+        #region Fields
+
         private readonly ISMBFileStore _fileStore;
         private readonly ResilienceOptions _resilience;
         private bool _disposed;
 
+        #endregion
+
+        #region Constructors
+
+        /// <summary>Initializes a new instance wrapping the given SMB file store.</summary>
+        /// <param name="fileStore">The SMB file store to operate on.</param>
+        /// <param name="resilience">Retry and timeout settings. Uses defaults if <c>null</c>.</param>
         internal SmbShare(ISMBFileStore fileStore, ResilienceOptions resilience = null)
         {
             _fileStore = fileStore ?? throw new ArgumentNullException(nameof(fileStore));
             _resilience = resilience ?? new ResilienceOptions();
         }
 
-        private void ThrowIfDisposed()
-        {
-            if (_disposed)
-                throw new ObjectDisposedException(nameof(SmbShare));
-        }
+        #endregion
 
-        // ── Metadata & listing ──────────────────────────────────────
+        #region Metadata & Listing
 
+        /// <inheritdoc />
         public Task<bool> ExistsAsync(string path, CancellationToken ct = default)
         {
             ThrowIfDisposed();
@@ -67,6 +77,7 @@ namespace SimpleShareLibrary.Providers.Smb
             }, ct), _resilience);
         }
 
+        /// <inheritdoc />
         public Task<ShareFileInfo> GetInfoAsync(string path, CancellationToken ct = default)
         {
             ThrowIfDisposed();
@@ -106,6 +117,7 @@ namespace SimpleShareLibrary.Providers.Smb
             }, ct), _resilience);
         }
 
+        /// <inheritdoc />
         public Task<IReadOnlyList<ShareFileInfo>> ListAsync(string path, string pattern = "*", CancellationToken ct = default)
         {
             ThrowIfDisposed();
@@ -117,6 +129,7 @@ namespace SimpleShareLibrary.Providers.Smb
             }, ct), _resilience);
         }
 
+        /// <inheritdoc />
         public Task<IReadOnlyList<ShareFileInfo>> ListRecursiveAsync(string path, string pattern = "*", CancellationToken ct = default)
         {
             ThrowIfDisposed();
@@ -130,8 +143,11 @@ namespace SimpleShareLibrary.Providers.Smb
             }, ct), _resilience);
         }
 
-        // ── Read ────────────────────────────────────────────────────
+        #endregion
 
+        #region Read
+
+        /// <inheritdoc />
         public Task<byte[]> ReadAllBytesAsync(string path, CancellationToken ct = default)
         {
             ThrowIfDisposed();
@@ -170,6 +186,7 @@ namespace SimpleShareLibrary.Providers.Smb
             }, ct), _resilience);
         }
 
+        /// <inheritdoc />
         public Task<string> ReadAllTextAsync(string path, Encoding encoding = null, CancellationToken ct = default)
         {
             ThrowIfDisposed();
@@ -180,6 +197,7 @@ namespace SimpleShareLibrary.Providers.Smb
             }, ct), _resilience);
         }
 
+        /// <inheritdoc />
         public Task<Stream> OpenReadAsync(string path, CancellationToken ct = default)
         {
             ThrowIfDisposed();
@@ -205,8 +223,11 @@ namespace SimpleShareLibrary.Providers.Smb
             }, ct), _resilience);
         }
 
-        // ── Write ───────────────────────────────────────────────────
+        #endregion
 
+        #region Write
+
+        /// <inheritdoc />
         public Task WriteAllBytesAsync(string path, byte[] data, bool overwrite = true, CancellationToken ct = default)
         {
             ThrowIfDisposed();
@@ -238,6 +259,7 @@ namespace SimpleShareLibrary.Providers.Smb
             }, ct), _resilience);
         }
 
+        /// <inheritdoc />
         public Task WriteAllTextAsync(string path, string text, Encoding encoding = null, bool overwrite = true, CancellationToken ct = default)
         {
             ThrowIfDisposed();
@@ -248,6 +270,7 @@ namespace SimpleShareLibrary.Providers.Smb
             }, ct);
         }
 
+        /// <inheritdoc />
         public Task<Stream> OpenWriteAsync(string path, bool overwrite = true, CancellationToken ct = default)
         {
             ThrowIfDisposed();
@@ -276,8 +299,11 @@ namespace SimpleShareLibrary.Providers.Smb
             }, ct), _resilience);
         }
 
-        // ── Copy ────────────────────────────────────────────────────
+        #endregion
 
+        #region Copy
+
+        /// <inheritdoc />
         public Task CopyFileAsync(string src, string dst, CopyOptions options = null, CancellationToken ct = default)
         {
             ThrowIfDisposed();
@@ -293,7 +319,6 @@ namespace SimpleShareLibrary.Providers.Smb
                         throw new ShareAlreadyExistsException(dst);
                 }
 
-                // Stream-based copy to avoid loading entire file into memory
                 using (var readStream = await OpenReadAsync(src, ct).ConfigureAwait(false))
                 using (var writeStream = await OpenWriteAsync(dst, options.Overwrite, ct).ConfigureAwait(false))
                 {
@@ -308,6 +333,7 @@ namespace SimpleShareLibrary.Providers.Smb
             }, ct);
         }
 
+        /// <inheritdoc />
         public Task CopyDirectoryAsync(string src, string dst, CopyOptions options = null, CancellationToken ct = default)
         {
             ThrowIfDisposed();
@@ -339,8 +365,11 @@ namespace SimpleShareLibrary.Providers.Smb
             }, ct);
         }
 
-        // ── Move (safe by default: copy-then-delete) ────────────────
+        #endregion
 
+        #region Move
+
+        /// <inheritdoc />
         public Task MoveFileAsync(string src, string dst, MoveOptions options = null, CancellationToken ct = default)
         {
             ThrowIfDisposed();
@@ -362,6 +391,7 @@ namespace SimpleShareLibrary.Providers.Smb
             }, ct);
         }
 
+        /// <inheritdoc />
         public Task MoveDirectoryAsync(string src, string dst, MoveOptions options = null, CancellationToken ct = default)
         {
             ThrowIfDisposed();
@@ -383,8 +413,11 @@ namespace SimpleShareLibrary.Providers.Smb
             }, ct);
         }
 
-        // ── Delete ──────────────────────────────────────────────────
+        #endregion
 
+        #region Delete
+
+        /// <inheritdoc />
         public Task DeleteFileAsync(string path, CancellationToken ct = default)
         {
             ThrowIfDisposed();
@@ -409,6 +442,7 @@ namespace SimpleShareLibrary.Providers.Smb
             }, ct), _resilience);
         }
 
+        /// <inheritdoc />
         public Task DeleteDirectoryAsync(string path, bool recursive = false, CancellationToken ct = default)
         {
             ThrowIfDisposed();
@@ -449,6 +483,7 @@ namespace SimpleShareLibrary.Providers.Smb
             }, ct);
         }
 
+        /// <inheritdoc />
         public Task DeleteAllAsync(string path, CancellationToken ct = default)
         {
             ThrowIfDisposed();
@@ -467,8 +502,11 @@ namespace SimpleShareLibrary.Providers.Smb
             }, ct);
         }
 
-        // ── Directories ─────────────────────────────────────────────
+        #endregion
 
+        #region Directories
+
+        /// <inheritdoc />
         public Task CreateDirectoryAsync(string path, bool createParents = true, CancellationToken ct = default)
         {
             ThrowIfDisposed();
@@ -488,13 +526,17 @@ namespace SimpleShareLibrary.Providers.Smb
             }, ct), _resilience);
         }
 
+        /// <inheritdoc />
         public Task EnsureDirectoryExistsAsync(string path, CancellationToken ct = default)
         {
             return CreateDirectoryAsync(path, true, ct);
         }
 
-        // ── Rename ──────────────────────────────────────────────────
+        #endregion
 
+        #region Rename
+
+        /// <inheritdoc />
         public Task RenameAsync(string path, string newName, CancellationToken ct = default)
         {
             ThrowIfDisposed();
@@ -508,7 +550,9 @@ namespace SimpleShareLibrary.Providers.Smb
             }, ct), _resilience);
         }
 
-        // ── Internal helpers ────────────────────────────────────────
+        #endregion
+
+        #region Private Helpers
 
         private IReadOnlyList<ShareFileInfo> ListInternal(string normalizedPath, string pattern)
         {
@@ -527,8 +571,6 @@ namespace SimpleShareLibrary.Providers.Smb
 
             try
             {
-                // Always query with "*" and filter locally for consistent behavior
-                // between ListAsync and ListRecursiveAsync
                 status = _fileStore.QueryDirectory(
                     out List<QueryDirectoryFileInformation> entries,
                     handle,
@@ -579,7 +621,6 @@ namespace SimpleShareLibrary.Providers.Smb
         {
             ct.ThrowIfCancellationRequested();
 
-            // Always list all items in the directory to descend into subdirs
             var allItems = ListInternal(normalizedPath, "*");
 
             foreach (var item in allItems)
@@ -601,9 +642,6 @@ namespace SimpleShareLibrary.Providers.Smb
             }
         }
 
-        // Supports: "*" (all), "*.*" (all), "*.ext" (extension match), and exact name match.
-        // Does not support: prefix wildcards ("file*"), single-char wildcards ("doc?.txt"),
-        // or multi-pattern matching ("*.{txt,csv}").
         private static bool MatchesPattern(string name, string pattern)
         {
             if (pattern == "*" || pattern == "*.*")
@@ -611,7 +649,7 @@ namespace SimpleShareLibrary.Providers.Smb
 
             if (pattern.StartsWith("*.", StringComparison.Ordinal))
             {
-                var ext = pattern.Substring(1); // ".ext"
+                var ext = pattern.Substring(1);
                 return name.EndsWith(ext, StringComparison.OrdinalIgnoreCase);
             }
 
@@ -731,6 +769,17 @@ namespace SimpleShareLibrary.Providers.Smb
             };
         }
 
+        private void ThrowIfDisposed()
+        {
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(SmbShare));
+        }
+
+        #endregion
+
+        #region IDisposable
+
+        /// <inheritdoc />
         public void Dispose()
         {
             if (!_disposed)
@@ -739,5 +788,7 @@ namespace SimpleShareLibrary.Providers.Smb
                 _disposed = true;
             }
         }
+
+        #endregion
     }
 }

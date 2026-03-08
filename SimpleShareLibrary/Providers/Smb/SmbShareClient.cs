@@ -8,20 +8,38 @@ using SMBLibrary.Client;
 
 namespace SimpleShareLibrary.Providers.Smb
 {
+    /// <summary>
+    /// SMB implementation of <see cref="IShareClient"/> that wraps an authenticated SMB session.
+    /// </summary>
     internal class SmbShareClient : IShareClient
     {
+        #region Fields
+
         private readonly ISMBClient _client;
         private readonly ResilienceOptions _resilience;
         private bool _disposed;
 
+        #endregion
+
+        #region Constructors
+
+        /// <summary>Initializes a new instance wrapping the given SMB client session.</summary>
+        /// <param name="client">The connected and authenticated SMB client.</param>
+        /// <param name="resilience">Retry and timeout settings. Uses defaults if <c>null</c>.</param>
         internal SmbShareClient(ISMBClient client, ResilienceOptions resilience = null)
         {
             _client = client ?? throw new ArgumentNullException(nameof(client));
             _resilience = resilience ?? new ResilienceOptions();
         }
 
+        #endregion
+
+        #region Public Members
+
+        /// <inheritdoc />
         public bool IsConnected => _client.IsConnected;
 
+        /// <inheritdoc />
         public Task<IReadOnlyList<string>> ListSharesAsync(CancellationToken ct = default)
         {
             ThrowIfDisposed();
@@ -36,6 +54,7 @@ namespace SimpleShareLibrary.Providers.Smb
             }, ct);
         }
 
+        /// <inheritdoc />
         public Task<IShare> OpenShareAsync(string shareName, CancellationToken ct = default)
         {
             ThrowIfDisposed();
@@ -53,6 +72,11 @@ namespace SimpleShareLibrary.Providers.Smb
             }, ct);
         }
 
+        #endregion
+
+        #region IDisposable
+
+        /// <inheritdoc />
         public void Dispose()
         {
             if (!_disposed)
@@ -66,10 +90,16 @@ namespace SimpleShareLibrary.Providers.Smb
             }
         }
 
+        #endregion
+
+        #region Private Helpers
+
         private void ThrowIfDisposed()
         {
             if (_disposed)
                 throw new ObjectDisposedException(nameof(SmbShareClient));
         }
+
+        #endregion
     }
 }

@@ -28,7 +28,7 @@ public class SmbShareTests
         _share.Dispose();
     }
 
-    // ── ExistsAsync ──────────────────────────────────────
+    #region ExistsAsync
 
     [TestMethod]
     public async Task ExistsAsync_FileExists_ReturnsTrue()
@@ -70,7 +70,9 @@ public class SmbShareTests
             () => _share.ExistsAsync("secret.txt"));
     }
 
-    // ── DeleteFileAsync ──────────────────────────────────
+    #endregion
+
+    #region DeleteFileAsync
 
     [TestMethod]
     public async Task DeleteFileAsync_Success_ClosesHandle()
@@ -91,7 +93,9 @@ public class SmbShareTests
             () => _share.DeleteFileAsync("missing.txt"));
     }
 
-    // ── CreateDirectoryAsync ─────────────────────────────
+    #endregion
+
+    #region CreateDirectoryAsync
 
     [TestMethod]
     public async Task CreateDirectoryAsync_Simple_CreatesDirectory()
@@ -110,7 +114,6 @@ public class SmbShareTests
 
         await _share.CreateDirectoryAsync("a/b/c", createParents: true);
 
-        // Should have called CreateFile at least once for the path
         _mockStore.Verify(s => s.CreateFile(
             out It.Ref<object>.IsAny,
             out It.Ref<FileStatus>.IsAny,
@@ -123,7 +126,9 @@ public class SmbShareTests
             It.IsAny<SecurityContext>()), Times.AtLeastOnce);
     }
 
-    // ── RenameAsync ──────────────────────────────────────
+    #endregion
+
+    #region RenameAsync
 
     [TestMethod]
     public async Task RenameAsync_Success_SetsRenameInfo()
@@ -138,7 +143,9 @@ public class SmbShareTests
         _mockStore.Verify(s => s.CloseFile(_handle), Times.Once);
     }
 
-    // ── WriteAllBytesAsync ───────────────────────────────
+    #endregion
+
+    #region WriteAllBytesAsync
 
     [TestMethod]
     public async Task WriteAllBytesAsync_WritesData()
@@ -162,7 +169,9 @@ public class SmbShareTests
         CollectionAssert.AreEqual(data, writtenData);
     }
 
-    // ── ReadAllBytesAsync ────────────────────────────────
+    #endregion
+
+    #region ReadAllBytesAsync
 
     [TestMethod]
     public async Task ReadAllBytesAsync_ReadsData()
@@ -179,7 +188,6 @@ public class SmbShareTests
             }))
             .Returns(() => readCall == 0 ? NTStatus.STATUS_SUCCESS : NTStatus.STATUS_END_OF_FILE);
 
-        // Re-setup with proper sequencing: first call returns data, second returns EOF
         readCall = 0;
         _mockStore.Setup(s => s.ReadFile(out It.Ref<byte[]>.IsAny, _handle, It.IsAny<long>(), It.IsAny<int>()))
             .Returns(new ReadFileReturnDelegate((out byte[] d, object h, long pos, int count) =>
@@ -199,7 +207,9 @@ public class SmbShareTests
         CollectionAssert.AreEqual(expected, result);
     }
 
-    // ── CopyFileAsync ────────────────────────────────────
+    #endregion
+
+    #region CopyFileAsync
 
     [TestMethod]
     public async Task CopyFileAsync_NoOverwriteAndDestExists_Throws()
@@ -210,7 +220,9 @@ public class SmbShareTests
             () => _share.CopyFileAsync("src.txt", "dst.txt", new CopyOptions { Overwrite = false }));
     }
 
-    // ── MoveFileAsync ────────────────────────────────────
+    #endregion
+
+    #region MoveFileAsync
 
     [TestMethod]
     public async Task MoveFileAsync_UnsafeMode_CallsRename()
@@ -224,7 +236,9 @@ public class SmbShareTests
         _mockStore.Verify(s => s.SetFileInformation(_handle, It.IsAny<FileRenameInformationType2>()), Times.Once);
     }
 
-    // ── Disposed ─────────────────────────────────────────
+    #endregion
+
+    #region Disposed
 
     [TestMethod]
     public async Task ExistsAsync_AfterDispose_ThrowsObjectDisposedException()
@@ -275,7 +289,9 @@ public class SmbShareTests
         await Assert.ThrowsExceptionAsync<ObjectDisposedException>(() => _share.RenameAsync("old", "new"));
     }
 
-    // ── CancellationToken ────────────────────────────────
+    #endregion
+
+    #region CancellationToken
 
     [TestMethod]
     public async Task ExistsAsync_Cancelled_ThrowsOperationCanceledException()
@@ -293,7 +309,9 @@ public class SmbShareTests
         await Assert.ThrowsExceptionAsync<TaskCanceledException>(() => _share.ReadAllBytesAsync("test.txt", cts.Token));
     }
 
-    // ── Path Normalization ───────────────────────────────
+    #endregion
+
+    #region Path Normalization
 
     [TestMethod]
     public async Task ExistsAsync_ForwardSlashPath_NormalizesBeforeCall()
@@ -303,7 +321,9 @@ public class SmbShareTests
         Assert.IsTrue(result);
     }
 
-    // ── Dispose disconnects file store ───────────────────
+    #endregion
+
+    #region Dispose Behavior
 
     [TestMethod]
     public void Dispose_DisconnectsFileStore()
@@ -322,7 +342,9 @@ public class SmbShareTests
         _mockStore.Verify(s => s.Disconnect(), Times.Once);
     }
 
-    // ── Helpers ──────────────────────────────────────────
+    #endregion
+
+    #region Helpers
 
     private void SetupCreateFileSuccess()
     {
@@ -370,7 +392,9 @@ public class SmbShareTests
             .Returns(status);
     }
 
-    // ── Delegates for Moq out parameters ─────────────────
+    #endregion
+
+    #region Delegates
 
     private delegate void CreateFileCallbackVoid(
         out object handle, out FileStatus fileStatus,
@@ -381,4 +405,6 @@ public class SmbShareTests
     private delegate void ReadFileCallbackVoid(out byte[] data, object handle, long offset, int count);
     private delegate void WriteFileCallbackVoid(out int bytesWritten, object handle, long offset, byte[] data);
     private delegate NTStatus ReadFileReturnDelegate(out byte[] data, object handle, long offset, int count);
+
+    #endregion
 }

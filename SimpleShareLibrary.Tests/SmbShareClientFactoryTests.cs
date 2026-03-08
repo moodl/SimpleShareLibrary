@@ -9,7 +9,7 @@ namespace SimpleShareLibrary.Tests;
 [TestClass]
 public class SmbShareClientFactoryTests
 {
-    // ── ConnectAsync ─────────────────────────────────────
+    #region ConnectAsync
 
     [TestMethod]
     public async Task ConnectAsync_SuccessfulConnection_ReturnsIShareClient()
@@ -168,4 +168,6 @@ public class SmbShareClientFactoryTests
         Assert.IsNotNull(client);
         Assert.AreEqual(2, attempt);
     }
+
+    #endregion
 }
