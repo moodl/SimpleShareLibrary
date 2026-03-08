@@ -119,7 +119,7 @@ public class SmbShareClientFactoryTests
     }
 
     [TestMethod]
-    public async Task ConnectAsync_Cancelled_ThrowsOperationCanceledException()
+    public async Task ConnectAsync_Cancelled_ThrowsTaskCanceledException()
     {
         var factory = new SmbShareClientFactory(() => new Mock<ISMBClient>().Object);
         var options = new ConnectionOptions { Host = "server1" };
@@ -127,7 +127,7 @@ public class SmbShareClientFactoryTests
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
-        await Assert.ThrowsExceptionAsync<OperationCanceledException>(
+        await Assert.ThrowsExceptionAsync<TaskCanceledException>(
             () => factory.ConnectAsync(options, cts.Token));
     }
 

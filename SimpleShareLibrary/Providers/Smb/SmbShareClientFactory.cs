@@ -49,44 +49,41 @@ namespace SimpleShareLibrary.Providers.Smb
 
             var resilience = options.Resilience ?? new ResilienceOptions();
 
-            return RetryHelper.ExecuteAsync(async () =>
+            return RetryHelper.ExecuteAsync(() => Task.Run(() =>
             {
                 ct.ThrowIfCancellationRequested();
 
-                return await Task.Run(() =>
+                var client = _clientFactory();
+                bool connected;
+
+                if (IPAddress.TryParse(options.Host, out IPAddress ip))
                 {
-                    var client = _clientFactory();
-                    bool connected;
+                    connected = client.Connect(ip, SMBTransportType.DirectTCPTransport);
+                }
+                else
+                {
+                    connected = client.Connect(options.Host, SMBTransportType.DirectTCPTransport);
+                }
 
-                    if (IPAddress.TryParse(options.Host, out IPAddress ip))
-                    {
-                        connected = client.Connect(ip, SMBTransportType.DirectTCPTransport);
-                    }
-                    else
-                    {
-                        connected = client.Connect(options.Host, SMBTransportType.DirectTCPTransport);
-                    }
+                if (!connected)
+                {
+                    throw new ShareConnectionException(
+                        $"Failed to connect to '{options.Host}'.");
+                }
 
-                    if (!connected)
-                    {
-                        throw new ShareConnectionException(
-                            $"Failed to connect to '{options.Host}'.");
-                    }
+                var loginStatus = client.Login(
+                    options.Domain ?? string.Empty,
+                    options.Username ?? string.Empty,
+                    options.Password ?? string.Empty);
 
-                    var loginStatus = client.Login(
-                        options.Domain ?? string.Empty,
-                        options.Username ?? string.Empty,
-                        options.Password ?? string.Empty);
+                if (loginStatus != NTStatus.STATUS_SUCCESS)
+                {
+                    try { client.Disconnect(); } catch { }
+                    NTStatusMapper.ThrowOnFailure(loginStatus);
+                }
 
-                    if (loginStatus != NTStatus.STATUS_SUCCESS)
-                    {
-                        try { client.Disconnect(); } catch { }
-                        NTStatusMapper.ThrowOnFailure(loginStatus);
-                    }
-
-                    return (IShareClient)new SmbShareClient(client, resilience);
-                }, ct);
-            }, resilience);
+                return (IShareClient)new SmbShareClient(client, resilience);
+            }, ct), resilience);
         }
 
         #endregion
