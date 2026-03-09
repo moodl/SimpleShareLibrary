@@ -118,6 +118,11 @@ namespace SimpleShareLibrary.Providers.Smb
                 var status = _fileStore.WriteFile(out int bytesWritten, _handle, _position, chunk);
                 NTStatusMapper.ThrowOnFailure(status);
 
+                if (bytesWritten == 0)
+                {
+                    throw new IOException("SMB server accepted zero bytes on write.");
+                }
+
                 totalWritten += bytesWritten;
                 _position += bytesWritten;
             }

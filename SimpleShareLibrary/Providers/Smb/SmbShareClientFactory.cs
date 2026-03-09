@@ -54,35 +54,42 @@ namespace SimpleShareLibrary.Providers.Smb
                 ct.ThrowIfCancellationRequested();
 
                 var client = _clientFactory();
-                bool connected;
-
-                if (IPAddress.TryParse(options.Host, out IPAddress ip))
+                try
                 {
-                    connected = client.Connect(ip, SMBTransportType.DirectTCPTransport);
-                }
-                else
-                {
-                    connected = client.Connect(options.Host, SMBTransportType.DirectTCPTransport);
-                }
+                    bool connected;
 
-                if (!connected)
-                {
-                    throw new ShareConnectionException(
-                        $"Failed to connect to '{options.Host}'.");
+                    if (IPAddress.TryParse(options.Host, out IPAddress ip))
+                    {
+                        connected = client.Connect(ip, SMBTransportType.DirectTCPTransport);
+                    }
+                    else
+                    {
+                        connected = client.Connect(options.Host, SMBTransportType.DirectTCPTransport);
+                    }
+
+                    if (!connected)
+                    {
+                        throw new ShareConnectionException(
+                            $"Failed to connect to '{options.Host}'.");
+                    }
+
+                    var loginStatus = client.Login(
+                        options.Domain ?? string.Empty,
+                        options.Username ?? string.Empty,
+                        options.Password ?? string.Empty);
+
+                    if (loginStatus != NTStatus.STATUS_SUCCESS)
+                    {
+                        NTStatusMapper.ThrowOnFailure(loginStatus);
+                    }
+
+                    return (IShareClient)new SmbShareClient(client, resilience);
                 }
-
-                var loginStatus = client.Login(
-                    options.Domain ?? string.Empty,
-                    options.Username ?? string.Empty,
-                    options.Password ?? string.Empty);
-
-                if (loginStatus != NTStatus.STATUS_SUCCESS)
+                catch
                 {
                     try { client.Disconnect(); } catch { }
-                    NTStatusMapper.ThrowOnFailure(loginStatus);
+                    throw;
                 }
-
-                return (IShareClient)new SmbShareClient(client, resilience);
             }, ct), resilience);
         }
 
@@ -99,35 +106,42 @@ namespace SimpleShareLibrary.Providers.Smb
             return RetryHelper.Execute(() =>
             {
                 var client = _clientFactory();
-                bool connected;
-
-                if (IPAddress.TryParse(options.Host, out IPAddress ip))
+                try
                 {
-                    connected = client.Connect(ip, SMBTransportType.DirectTCPTransport);
-                }
-                else
-                {
-                    connected = client.Connect(options.Host, SMBTransportType.DirectTCPTransport);
-                }
+                    bool connected;
 
-                if (!connected)
-                {
-                    throw new ShareConnectionException(
-                        $"Failed to connect to '{options.Host}'.");
+                    if (IPAddress.TryParse(options.Host, out IPAddress ip))
+                    {
+                        connected = client.Connect(ip, SMBTransportType.DirectTCPTransport);
+                    }
+                    else
+                    {
+                        connected = client.Connect(options.Host, SMBTransportType.DirectTCPTransport);
+                    }
+
+                    if (!connected)
+                    {
+                        throw new ShareConnectionException(
+                            $"Failed to connect to '{options.Host}'.");
+                    }
+
+                    var loginStatus = client.Login(
+                        options.Domain ?? string.Empty,
+                        options.Username ?? string.Empty,
+                        options.Password ?? string.Empty);
+
+                    if (loginStatus != NTStatus.STATUS_SUCCESS)
+                    {
+                        NTStatusMapper.ThrowOnFailure(loginStatus);
+                    }
+
+                    return (IShareClient)new SmbShareClient(client, resilience);
                 }
-
-                var loginStatus = client.Login(
-                    options.Domain ?? string.Empty,
-                    options.Username ?? string.Empty,
-                    options.Password ?? string.Empty);
-
-                if (loginStatus != NTStatus.STATUS_SUCCESS)
+                catch
                 {
                     try { client.Disconnect(); } catch { }
-                    NTStatusMapper.ThrowOnFailure(loginStatus);
+                    throw;
                 }
-
-                return (IShareClient)new SmbShareClient(client, resilience);
             }, resilience);
         }
 

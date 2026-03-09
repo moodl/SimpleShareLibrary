@@ -59,16 +59,24 @@ public class NTStatusMapperTests
     }
 
     [TestMethod]
-    [DataRow(NTStatus.STATUS_DIRECTORY_NOT_EMPTY)]
-    [DataRow(NTStatus.STATUS_DISK_FULL)]
     [DataRow(NTStatus.STATUS_IO_TIMEOUT)]
     [DataRow(NTStatus.STATUS_SHARING_VIOLATION)]
     [DataRow(NTStatus.STATUS_INSUFFICIENT_RESOURCES)]
     [DataRow(NTStatus.STATUS_REQUEST_NOT_ACCEPTED)]
-    public void ThrowOnFailure_IOStatuses_ThrowShareIOException(NTStatus status)
+    public void ThrowOnFailure_TransientIOStatuses_ThrowShareIOException(NTStatus status)
     {
         Assert.ThrowsException<ShareIOException>(
             () => NTStatusMapper.ThrowOnFailure(status, "file"));
+    }
+
+    [TestMethod]
+    [DataRow(NTStatus.STATUS_DIRECTORY_NOT_EMPTY)]
+    [DataRow(NTStatus.STATUS_DISK_FULL)]
+    public void ThrowOnFailure_NonTransientStatuses_ThrowShareException(NTStatus status)
+    {
+        var ex = Assert.ThrowsException<ShareException>(
+            () => NTStatusMapper.ThrowOnFailure(status, "file"));
+        Assert.IsNotInstanceOfType(ex, typeof(ShareIOException));
     }
 
     [TestMethod]
@@ -95,10 +103,11 @@ public class NTStatusMapperTests
     }
 
     [TestMethod]
-    public void ThrowOnFailure_UnmappedStatus_ThrowsShareIOException()
+    public void ThrowOnFailure_UnmappedStatus_ThrowsShareException()
     {
-        Assert.ThrowsException<ShareIOException>(
+        var ex = Assert.ThrowsException<ShareException>(
             () => NTStatusMapper.ThrowOnFailure(NTStatus.STATUS_INVALID_PARAMETER, "file"));
+        Assert.IsNotInstanceOfType(ex, typeof(ShareIOException));
     }
 
     [TestMethod]

@@ -429,41 +429,51 @@ namespace SimpleShareLibrary.Providers.Smb
 
             try
             {
-                var (queryStatus, entries) = await QueryDirectoryCore(
-                    useAsync,
-                    handle,
-                    "*",
-                    FileInformationClass.FileDirectoryInformation).ConfigureAwait(false);
-
-                if (queryStatus == NTStatus.STATUS_NO_MORE_FILES)
-                    return new List<ShareFileInfo>();
-
-                NTStatusMapper.ThrowOnFailure(queryStatus, normalizedPath);
-
                 var results = new List<ShareFileInfo>();
-                foreach (var entry in entries)
+
+                while (true)
                 {
-                    if (entry is FileDirectoryInformation dirInfo)
+                    var (queryStatus, entries) = await QueryDirectoryCore(
+                        useAsync,
+                        handle,
+                        "*",
+                        FileInformationClass.FileDirectoryInformation).ConfigureAwait(false);
+
+                    if (queryStatus == NTStatus.STATUS_NO_MORE_FILES)
                     {
-                        var name = dirInfo.FileName;
-                        if (name == "." || name == "..")
-                            continue;
+                        break;
+                    }
 
-                        if (!MatchesPattern(name, pattern))
-                            continue;
+                    NTStatusMapper.ThrowOnFailure(queryStatus, normalizedPath);
 
-                        results.Add(new ShareFileInfo
+                    foreach (var entry in entries)
+                    {
+                        if (entry is FileDirectoryInformation dirInfo)
                         {
-                            Name = name,
-                            FullPath = PathHelper.Combine(normalizedPath, name),
-                            IsDirectory = (dirInfo.FileAttributes & SMBLibrary.FileAttributes.Directory) != 0,
-                            Size = dirInfo.EndOfFile,
-                            CreatedUtc = dirInfo.CreationTime.ToUniversalTime(),
-                            LastWriteUtc = dirInfo.LastWriteTime.ToUniversalTime(),
-                            LastAccessUtc = dirInfo.LastAccessTime.ToUniversalTime(),
-                            IsReadOnly = (dirInfo.FileAttributes & SMBLibrary.FileAttributes.ReadOnly) != 0,
-                            IsHidden = (dirInfo.FileAttributes & SMBLibrary.FileAttributes.Hidden) != 0,
-                        });
+                            var name = dirInfo.FileName;
+                            if (name == "." || name == "..")
+                            {
+                                continue;
+                            }
+
+                            if (!MatchesPattern(name, pattern))
+                            {
+                                continue;
+                            }
+
+                            results.Add(new ShareFileInfo
+                            {
+                                Name = name,
+                                FullPath = PathHelper.Combine(normalizedPath, name),
+                                IsDirectory = (dirInfo.FileAttributes & SMBLibrary.FileAttributes.Directory) != 0,
+                                Size = dirInfo.EndOfFile,
+                                CreatedUtc = dirInfo.CreationTime.ToUniversalTime(),
+                                LastWriteUtc = dirInfo.LastWriteTime.ToUniversalTime(),
+                                LastAccessUtc = dirInfo.LastAccessTime.ToUniversalTime(),
+                                IsReadOnly = (dirInfo.FileAttributes & SMBLibrary.FileAttributes.ReadOnly) != 0,
+                                IsHidden = (dirInfo.FileAttributes & SMBLibrary.FileAttributes.Hidden) != 0,
+                            });
+                        }
                     }
                 }
 
@@ -532,7 +542,7 @@ namespace SimpleShareLibrary.Providers.Smb
             var (status, handle, _) = await CreateFileCore(
                 useAsync,
                 normalizedPath,
-                AccessMask.GENERIC_WRITE | AccessMask.DELETE | AccessMask.SYNCHRONIZE,
+                AccessMask.DELETE | AccessMask.SYNCHRONIZE,
                 SMBLibrary.FileAttributes.Normal,
                 ShareAccess.None,
                 CreateDisposition.FILE_OPEN,
@@ -579,7 +589,7 @@ namespace SimpleShareLibrary.Providers.Smb
             var (status, handle, _) = await CreateFileCore(
                 useAsync,
                 normalizedSrc,
-                AccessMask.GENERIC_WRITE | AccessMask.DELETE | AccessMask.SYNCHRONIZE,
+                AccessMask.DELETE | AccessMask.SYNCHRONIZE,
                 SMBLibrary.FileAttributes.Normal,
                 ShareAccess.None,
                 CreateDisposition.FILE_OPEN,

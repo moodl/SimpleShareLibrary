@@ -76,11 +76,11 @@ namespace SimpleShareLibrary.Providers.Smb
                         $"Authentication failed: {status}");
 
                 case NTStatus.STATUS_DIRECTORY_NOT_EMPTY:
-                    return new ShareIOException(
+                    return new ShareException(
                         $"Directory not empty: '{path ?? "unknown"}'");
 
                 case NTStatus.STATUS_DISK_FULL:
-                    return new ShareIOException(
+                    return new ShareException(
                         $"Disk full while operating on: '{path ?? "unknown"}'");
 
                 case NTStatus.STATUS_IO_TIMEOUT:
@@ -110,7 +110,7 @@ namespace SimpleShareLibrary.Providers.Smb
                         $"Request not accepted: '{path ?? "unknown"}'");
 
                 default:
-                    return new ShareIOException(
+                    return new ShareException(
                         $"Operation failed with status {status}: '{path ?? "unknown"}'");
             }
         }
