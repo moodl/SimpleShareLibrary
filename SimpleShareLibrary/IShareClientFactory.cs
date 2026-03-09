@@ -13,5 +13,8 @@ namespace SimpleShareLibrary
         /// <param name="ct">Cancellation token.</param>
         /// <returns>An authenticated <see cref="IShareClient"/> session.</returns>
         Task<IShareClient> ConnectAsync(ConnectionOptions options, CancellationToken ct = default);
+
+        /// <inheritdoc cref="ConnectAsync"/>
+        IShareClient Connect(ConnectionOptions options);
     }
 }

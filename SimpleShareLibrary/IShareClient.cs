@@ -18,10 +18,16 @@ namespace SimpleShareLibrary
         /// <returns>A read-only list of share names.</returns>
         Task<IReadOnlyList<string>> ListSharesAsync(CancellationToken ct = default);
 
+        /// <inheritdoc cref="ListSharesAsync"/>
+        IReadOnlyList<string> ListShares();
+
         /// <summary>Opens a share by name for file and directory operations.</summary>
         /// <param name="shareName">The name of the share to open.</param>
         /// <param name="ct">Cancellation token.</param>
         /// <returns>An <see cref="IShare"/> for performing operations on the share.</returns>
         Task<IShare> OpenShareAsync(string shareName, CancellationToken ct = default);
+
+        /// <inheritdoc cref="OpenShareAsync"/>
+        IShare OpenShare(string shareName);
     }
 }

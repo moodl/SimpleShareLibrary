@@ -170,4 +170,111 @@ public class RetryHelperTests
 
         Assert.AreEqual(99, result);
     }
+
+    #region Execute (Sync)
+
+    [TestMethod]
+    public void Execute_SucceedsFirstAttempt_ReturnsResult()
+    {
+        var result = RetryHelper.Execute(() => 42, _fastOptions);
+
+        Assert.AreEqual(42, result);
+    }
+
+    [TestMethod]
+    public void Execute_TransientConnectionException_RetriesAndSucceeds()
+    {
+        int attempts = 0;
+        var result = RetryHelper.Execute(() =>
+        {
+            attempts++;
+            if (attempts < 3)
+                throw new ShareConnectionException("transient");
+            return "ok";
+        }, _fastOptions);
+
+        Assert.AreEqual("ok", result);
+        Assert.AreEqual(3, attempts);
+    }
+
+    [TestMethod]
+    public void Execute_TransientIOException_RetriesAndSucceeds()
+    {
+        int attempts = 0;
+        var result = RetryHelper.Execute(() =>
+        {
+            attempts++;
+            if (attempts < 2)
+                throw new ShareIOException("transient io");
+            return "ok";
+        }, _fastOptions);
+
+        Assert.AreEqual("ok", result);
+        Assert.AreEqual(2, attempts);
+    }
+
+    [TestMethod]
+    public void Execute_AuthException_DoesNotRetry()
+    {
+        int attempts = 0;
+        Assert.ThrowsException<ShareAuthenticationException>(() =>
+        {
+            RetryHelper.Execute<int>(() =>
+            {
+                attempts++;
+                throw new ShareAuthenticationException("bad auth");
+            }, _fastOptions);
+        });
+
+        Assert.AreEqual(1, attempts);
+    }
+
+    [TestMethod]
+    public void Execute_AllRetriesExhausted_ThrowsLastException()
+    {
+        int attempts = 0;
+        Assert.ThrowsException<ShareConnectionException>(() =>
+        {
+            RetryHelper.Execute<int>(() =>
+            {
+                attempts++;
+                throw new ShareConnectionException($"attempt {attempts}");
+            }, _fastOptions);
+        });
+
+        Assert.AreEqual(4, attempts);
+    }
+
+    [TestMethod]
+    public void Execute_VoidOverload_SucceedsFirstAttempt()
+    {
+        bool called = false;
+        RetryHelper.Execute(() => { called = true; }, _fastOptions);
+
+        Assert.IsTrue(called);
+    }
+
+    [TestMethod]
+    public void Execute_VoidOverload_RetriesOnTransient()
+    {
+        int attempts = 0;
+        RetryHelper.Execute(() =>
+        {
+            attempts++;
+            if (attempts < 2)
+                throw new ShareIOException("transient");
+        }, _fastOptions);
+
+        Assert.AreEqual(2, attempts);
+    }
+
+    [TestMethod]
+    public void Execute_NullOptions_UsesDefaults()
+    {
+        var result = RetryHelper.Execute(() => 99, null!);
+
+        Assert.AreEqual(99, result);
+    }
+
+    #endregion
 }

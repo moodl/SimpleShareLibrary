@@ -311,6 +311,262 @@ public class SmbShareTests
 
     #endregion
 
+    #region Exists (Sync)
+
+    [TestMethod]
+    public void Exists_FileExists_ReturnsTrue()
+    {
+        SetupCreateFileSuccess();
+
+        var result = _share.Exists("test.txt");
+
+        Assert.IsTrue(result);
+        _mockStore.Verify(s => s.CloseFile(_handle), Times.Once);
+    }
+
+    [TestMethod]
+    public void Exists_FileNotFound_ReturnsFalse()
+    {
+        SetupCreateFile(NTStatus.STATUS_OBJECT_NAME_NOT_FOUND);
+
+        var result = _share.Exists("test.txt");
+
+        Assert.IsFalse(result);
+    }
+
+    [TestMethod]
+    public void Exists_AccessDenied_Throws()
+    {
+        SetupCreateFile(NTStatus.STATUS_ACCESS_DENIED);
+
+        Assert.ThrowsException<ShareAccessDeniedException>(
+            () => _share.Exists("secret.txt"));
+    }
+
+    #endregion
+
+    #region DeleteFile (Sync)
+
+    [TestMethod]
+    public void DeleteFile_Success_ClosesHandle()
+    {
+        SetupCreateFileSuccess();
+
+        _share.DeleteFile("file.txt");
+
+        _mockStore.Verify(s => s.CloseFile(_handle), Times.Once);
+    }
+
+    [TestMethod]
+    public void DeleteFile_NotFound_Throws()
+    {
+        SetupCreateFile(NTStatus.STATUS_OBJECT_NAME_NOT_FOUND);
+
+        Assert.ThrowsException<ShareFileNotFoundException>(
+            () => _share.DeleteFile("missing.txt"));
+    }
+
+    #endregion
+
+    #region CreateDirectory (Sync)
+
+    [TestMethod]
+    public void CreateDirectory_Simple_CreatesDirectory()
+    {
+        SetupCreateFileSuccess();
+
+        _share.CreateDirectory("newdir", createParents: false);
+
+        _mockStore.Verify(s => s.CloseFile(_handle), Times.Once);
+    }
+
+    [TestMethod]
+    public void CreateDirectory_WithParents_CreatesRecursively()
+    {
+        SetupCreateFileSuccess();
+
+        _share.CreateDirectory("a/b/c", createParents: true);
+
+        _mockStore.Verify(s => s.CreateFile(
+            out It.Ref<object>.IsAny,
+            out It.Ref<FileStatus>.IsAny,
+            It.IsAny<string>(),
+            It.IsAny<AccessMask>(),
+            It.IsAny<SMBLibrary.FileAttributes>(),
+            It.IsAny<ShareAccess>(),
+            It.IsAny<CreateDisposition>(),
+            It.IsAny<CreateOptions>(),
+            It.IsAny<SecurityContext>()), Times.AtLeastOnce);
+    }
+
+    #endregion
+
+    #region Rename (Sync)
+
+    [TestMethod]
+    public void Rename_Success_SetsRenameInfo()
+    {
+        SetupCreateFileSuccess();
+        _mockStore.Setup(s => s.SetFileInformation(_handle, It.IsAny<FileInformation>()))
+            .Returns(NTStatus.STATUS_SUCCESS);
+
+        _share.Rename("folder/old.txt", "new.txt");
+
+        _mockStore.Verify(s => s.SetFileInformation(_handle, It.IsAny<FileRenameInformationType2>()), Times.Once);
+        _mockStore.Verify(s => s.CloseFile(_handle), Times.Once);
+    }
+
+    #endregion
+
+    #region WriteAllBytes (Sync)
+
+    [TestMethod]
+    public void WriteAllBytes_WritesData()
+    {
+        var data = new byte[] { 10, 20, 30, 40, 50 };
+        byte[]? writtenData = null;
+
+        SetupCreateFileSuccess();
+        int bw = data.Length;
+        _mockStore.Setup(s => s.WriteFile(out bw, _handle, It.IsAny<long>(), It.IsAny<byte[]>()))
+            .Callback(new WriteFileCallbackVoid((out int bytesWritten, object h, long pos, byte[] d) =>
+            {
+                writtenData = d;
+                bytesWritten = d.Length;
+            }))
+            .Returns(NTStatus.STATUS_SUCCESS);
+
+        _share.WriteAllBytes("data.bin", data);
+
+        Assert.IsNotNull(writtenData);
+        CollectionAssert.AreEqual(data, writtenData);
+    }
+
+    #endregion
+
+    #region ReadAllBytes (Sync)
+
+    [TestMethod]
+    public void ReadAllBytes_ReadsData()
+    {
+        var expected = new byte[] { 1, 2, 3, 4, 5 };
+        SetupCreateFileSuccess();
+
+        int readCall = 0;
+        _mockStore.Setup(s => s.ReadFile(out It.Ref<byte[]>.IsAny, _handle, It.IsAny<long>(), It.IsAny<int>()))
+            .Returns(new ReadFileReturnDelegate((out byte[] d, object h, long pos, int count) =>
+            {
+                readCall++;
+                if (readCall == 1)
+                {
+                    d = expected;
+                    return NTStatus.STATUS_SUCCESS;
+                }
+                d = Array.Empty<byte>();
+                return NTStatus.STATUS_END_OF_FILE;
+            }));
+
+        var result = _share.ReadAllBytes("file.bin");
+
+        CollectionAssert.AreEqual(expected, result);
+    }
+
+    #endregion
+
+    #region CopyFile (Sync)
+
+    [TestMethod]
+    public void CopyFile_NoOverwriteAndDestExists_Throws()
+    {
+        SetupCreateFileSuccess();
+
+        Assert.ThrowsException<ShareAlreadyExistsException>(
+            () => _share.CopyFile("src.txt", "dst.txt", new CopyOptions { Overwrite = false }));
+    }
+
+    #endregion
+
+    #region MoveFile (Sync)
+
+    [TestMethod]
+    public void MoveFile_UnsafeMode_CallsRename()
+    {
+        SetupCreateFileSuccess();
+        _mockStore.Setup(s => s.SetFileInformation(_handle, It.IsAny<FileInformation>()))
+            .Returns(NTStatus.STATUS_SUCCESS);
+
+        _share.MoveFile("old.txt", "new.txt", new MoveOptions { Safe = false });
+
+        _mockStore.Verify(s => s.SetFileInformation(_handle, It.IsAny<FileRenameInformationType2>()), Times.Once);
+    }
+
+    #endregion
+
+    #region Disposed (Sync)
+
+    [TestMethod]
+    public void Exists_AfterDispose_ThrowsObjectDisposedException()
+    {
+        _share.Dispose();
+        Assert.ThrowsException<ObjectDisposedException>(() => _share.Exists("test.txt"));
+    }
+
+    [TestMethod]
+    public void ReadAllBytes_AfterDispose_ThrowsObjectDisposedException()
+    {
+        _share.Dispose();
+        Assert.ThrowsException<ObjectDisposedException>(() => _share.ReadAllBytes("test.txt"));
+    }
+
+    [TestMethod]
+    public void WriteAllBytes_AfterDispose_ThrowsObjectDisposedException()
+    {
+        _share.Dispose();
+        Assert.ThrowsException<ObjectDisposedException>(() => _share.WriteAllBytes("test.txt", new byte[] { 1 }));
+    }
+
+    [TestMethod]
+    public void DeleteFile_AfterDispose_ThrowsObjectDisposedException()
+    {
+        _share.Dispose();
+        Assert.ThrowsException<ObjectDisposedException>(() => _share.DeleteFile("test.txt"));
+    }
+
+    [TestMethod]
+    public void List_AfterDispose_ThrowsObjectDisposedException()
+    {
+        _share.Dispose();
+        Assert.ThrowsException<ObjectDisposedException>(() => _share.List("dir"));
+    }
+
+    [TestMethod]
+    public void CreateDirectory_AfterDispose_ThrowsObjectDisposedException()
+    {
+        _share.Dispose();
+        Assert.ThrowsException<ObjectDisposedException>(() => _share.CreateDirectory("dir"));
+    }
+
+    [TestMethod]
+    public void Rename_AfterDispose_ThrowsObjectDisposedException()
+    {
+        _share.Dispose();
+        Assert.ThrowsException<ObjectDisposedException>(() => _share.Rename("old", "new"));
+    }
+
+    #endregion
+
+    #region Path Normalization (Sync)
+
+    [TestMethod]
+    public void Exists_ForwardSlashPath_NormalizesBeforeCall()
+    {
+        SetupCreateFileSuccess();
+        var result = _share.Exists("folder/file.txt");
+        Assert.IsTrue(result);
+    }
+
+    #endregion
+
     #region Path Normalization
 
     [TestMethod]

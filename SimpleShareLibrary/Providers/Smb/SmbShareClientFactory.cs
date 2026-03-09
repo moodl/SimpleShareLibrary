@@ -86,6 +86,51 @@ namespace SimpleShareLibrary.Providers.Smb
             }, ct), resilience);
         }
 
+        /// <inheritdoc />
+        public IShareClient Connect(ConnectionOptions options)
+        {
+            if (options is null)
+                throw new ArgumentNullException(nameof(options));
+            if (string.IsNullOrWhiteSpace(options.Host))
+                throw new ArgumentException("Host is required.", nameof(options));
+
+            var resilience = options.Resilience ?? new ResilienceOptions();
+
+            return RetryHelper.Execute(() =>
+            {
+                var client = _clientFactory();
+                bool connected;
+
+                if (IPAddress.TryParse(options.Host, out IPAddress ip))
+                {
+                    connected = client.Connect(ip, SMBTransportType.DirectTCPTransport);
+                }
+                else
+                {
+                    connected = client.Connect(options.Host, SMBTransportType.DirectTCPTransport);
+                }
+
+                if (!connected)
+                {
+                    throw new ShareConnectionException(
+                        $"Failed to connect to '{options.Host}'.");
+                }
+
+                var loginStatus = client.Login(
+                    options.Domain ?? string.Empty,
+                    options.Username ?? string.Empty,
+                    options.Password ?? string.Empty);
+
+                if (loginStatus != NTStatus.STATUS_SUCCESS)
+                {
+                    try { client.Disconnect(); } catch { }
+                    NTStatusMapper.ThrowOnFailure(loginStatus);
+                }
+
+                return (IShareClient)new SmbShareClient(client, resilience);
+            }, resilience);
+        }
+
         #endregion
     }
 }

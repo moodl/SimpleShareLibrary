@@ -170,4 +170,129 @@ public class SmbShareClientFactoryTests
     }
 
     #endregion
+
+    #region Connect (Sync)
+
+    [TestMethod]
+    public void Connect_SuccessfulConnection_ReturnsIShareClient()
+    {
+        var mockClient = new Mock<ISMBClient>();
+        mockClient.Setup(c => c.Connect(It.IsAny<string>(), SMBTransportType.DirectTCPTransport)).Returns(true);
+        mockClient.Setup(c => c.Login(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Returns(NTStatus.STATUS_SUCCESS);
+        mockClient.Setup(c => c.IsConnected).Returns(true);
+
+        var factory = new SmbShareClientFactory(() => mockClient.Object);
+        var options = new ConnectionOptions
+        {
+            Host = "server1",
+            Username = "user",
+            Password = "pass",
+            Resilience = new ResilienceOptions { MaxRetries = 0 }
+        };
+
+        var client = factory.Connect(options);
+
+        Assert.IsNotNull(client);
+        Assert.IsTrue(client.IsConnected);
+    }
+
+    [TestMethod]
+    public void Connect_ConnectionFails_ThrowsShareConnectionException()
+    {
+        var mockClient = new Mock<ISMBClient>();
+        mockClient.Setup(c => c.Connect(It.IsAny<string>(), SMBTransportType.DirectTCPTransport)).Returns(false);
+
+        var factory = new SmbShareClientFactory(() => mockClient.Object);
+        var options = new ConnectionOptions
+        {
+            Host = "badserver",
+            Resilience = new ResilienceOptions { MaxRetries = 0 }
+        };
+
+        Assert.ThrowsException<ShareConnectionException>(
+            () => factory.Connect(options));
+    }
+
+    [TestMethod]
+    public void Connect_LoginFails_ThrowsShareAuthenticationException()
+    {
+        var mockClient = new Mock<ISMBClient>();
+        mockClient.Setup(c => c.Connect(It.IsAny<string>(), SMBTransportType.DirectTCPTransport)).Returns(true);
+        mockClient.Setup(c => c.Login(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Returns(NTStatus.STATUS_LOGON_FAILURE);
+
+        var factory = new SmbShareClientFactory(() => mockClient.Object);
+        var options = new ConnectionOptions
+        {
+            Host = "server1",
+            Username = "baduser",
+            Password = "badpass",
+            Resilience = new ResilienceOptions { MaxRetries = 0 }
+        };
+
+        Assert.ThrowsException<ShareAuthenticationException>(
+            () => factory.Connect(options));
+
+        mockClient.Verify(c => c.Disconnect(), Times.Once);
+    }
+
+    [TestMethod]
+    public void Connect_NullOptions_ThrowsArgumentNullException()
+    {
+        var factory = new SmbShareClientFactory(() => new Mock<ISMBClient>().Object);
+
+        Assert.ThrowsException<ArgumentNullException>(
+            () => factory.Connect(null!));
+    }
+
+    [TestMethod]
+    public void Connect_EmptyHost_ThrowsArgumentException()
+    {
+        var factory = new SmbShareClientFactory(() => new Mock<ISMBClient>().Object);
+        var options = new ConnectionOptions { Host = "" };
+
+        Assert.ThrowsException<ArgumentException>(
+            () => factory.Connect(options));
+    }
+
+    [TestMethod]
+    public void Connect_TransientFailureThenSuccess_Retries()
+    {
+        int attempt = 0;
+        var factory = new SmbShareClientFactory(() =>
+        {
+            attempt++;
+            var mock = new Mock<ISMBClient>();
+
+            if (attempt < 2)
+            {
+                mock.Setup(c => c.Connect(It.IsAny<string>(), SMBTransportType.DirectTCPTransport)).Returns(false);
+            }
+            else
+            {
+                mock.Setup(c => c.Connect(It.IsAny<string>(), SMBTransportType.DirectTCPTransport)).Returns(true);
+                mock.Setup(c => c.Login(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                    .Returns(NTStatus.STATUS_SUCCESS);
+                mock.Setup(c => c.IsConnected).Returns(true);
+            }
+
+            return mock.Object;
+        });
+
+        var options = new ConnectionOptions
+        {
+            Host = "server1",
+            Username = "user",
+            Password = "pass",
+            Resilience = new ResilienceOptions { MaxRetries = 3, RetryDelay = TimeSpan.FromMilliseconds(1) }
+        };
+
+        var client = factory.Connect(options);
+
+        Assert.IsNotNull(client);
+        Assert.AreEqual(2, attempt);
+    }
+
+    #endregion
 }

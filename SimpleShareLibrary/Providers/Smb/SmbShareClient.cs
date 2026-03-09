@@ -72,6 +72,31 @@ namespace SimpleShareLibrary.Providers.Smb
             }, ct);
         }
 
+        /// <inheritdoc />
+        public IReadOnlyList<string> ListShares()
+        {
+            ThrowIfDisposed();
+
+            var shares = _client.ListShares(out NTStatus status);
+            NTStatusMapper.ThrowOnFailure(status);
+
+            return shares.AsReadOnly();
+        }
+
+        /// <inheritdoc />
+        public IShare OpenShare(string shareName)
+        {
+            ThrowIfDisposed();
+
+            if (string.IsNullOrWhiteSpace(shareName))
+                throw new ArgumentException("Share name cannot be null or empty.", nameof(shareName));
+
+            var fileStore = _client.TreeConnect(shareName, out NTStatus status);
+            NTStatusMapper.ThrowOnFailure(status, shareName);
+
+            return new SmbShare(fileStore, _resilience);
+        }
+
         #endregion
 
         #region IDisposable

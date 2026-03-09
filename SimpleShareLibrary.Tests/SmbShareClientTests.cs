@@ -105,6 +105,91 @@ public class SmbShareClientTests
 
     #endregion
 
+    #region ListShares (Sync)
+
+    [TestMethod]
+    public void ListShares_ReturnsShareNames()
+    {
+        var status = NTStatus.STATUS_SUCCESS;
+        var shares = new List<string> { "Share1", "Share2", "Documents" };
+        _mockClient.Setup(c => c.ListShares(out status)).Returns(shares);
+
+        var result = _client.ListShares();
+
+        Assert.AreEqual(3, result.Count);
+        Assert.AreEqual("Share1", result[0]);
+    }
+
+    [TestMethod]
+    public void ListShares_FailureStatus_Throws()
+    {
+        var status = NTStatus.STATUS_ACCESS_DENIED;
+        _mockClient.Setup(c => c.ListShares(out status)).Returns(new List<string>());
+
+        Assert.ThrowsException<ShareAccessDeniedException>(
+            () => _client.ListShares());
+    }
+
+    #endregion
+
+    #region OpenShare (Sync)
+
+    [TestMethod]
+    public void OpenShare_Success_ReturnsIShare()
+    {
+        var status = NTStatus.STATUS_SUCCESS;
+        var mockFileStore = new Mock<ISMBFileStore>();
+        _mockClient.Setup(c => c.TreeConnect("MyShare", out status))
+            .Returns(mockFileStore.Object);
+
+        var share = _client.OpenShare("MyShare");
+
+        Assert.IsNotNull(share);
+        Assert.IsInstanceOfType(share, typeof(IShare));
+    }
+
+    [TestMethod]
+    public void OpenShare_NullShareName_ThrowsArgumentException()
+    {
+        Assert.ThrowsException<ArgumentException>(
+            () => _client.OpenShare(null!));
+    }
+
+    [TestMethod]
+    public void OpenShare_FailureStatus_Throws()
+    {
+        var status = NTStatus.STATUS_OBJECT_NAME_NOT_FOUND;
+        _mockClient.Setup(c => c.TreeConnect("BadShare", out status))
+            .Returns((ISMBFileStore)null!);
+
+        Assert.ThrowsException<ShareFileNotFoundException>(
+            () => _client.OpenShare("BadShare"));
+    }
+
+    #endregion
+
+    #region Disposed (Sync)
+
+    [TestMethod]
+    public void ListShares_AfterDispose_ThrowsObjectDisposedException()
+    {
+        _client.Dispose();
+
+        Assert.ThrowsException<ObjectDisposedException>(
+            () => _client.ListShares());
+    }
+
+    [TestMethod]
+    public void OpenShare_AfterDispose_ThrowsObjectDisposedException()
+    {
+        _client.Dispose();
+
+        Assert.ThrowsException<ObjectDisposedException>(
+            () => _client.OpenShare("test"));
+    }
+
+    #endregion
+
     #region Dispose
 
     [TestMethod]
