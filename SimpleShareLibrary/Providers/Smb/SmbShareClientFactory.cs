@@ -14,6 +14,13 @@ namespace SimpleShareLibrary.Providers.Smb
     /// </summary>
     internal class SmbShareClientFactory : IShareClientFactory
     {
+        #region Constants
+
+        /// <summary>The default SMB port.</summary>
+        private const int DefaultSmbPort = 445;
+
+        #endregion
+
         #region Fields
 
         private readonly Func<ISMBClient> _clientFactory;
@@ -52,44 +59,7 @@ namespace SimpleShareLibrary.Providers.Smb
             return RetryHelper.ExecuteAsync(() => Task.Run(() =>
             {
                 ct.ThrowIfCancellationRequested();
-
-                var client = _clientFactory();
-                try
-                {
-                    bool connected;
-
-                    if (IPAddress.TryParse(options.Host, out IPAddress ip))
-                    {
-                        connected = client.Connect(ip, SMBTransportType.DirectTCPTransport);
-                    }
-                    else
-                    {
-                        connected = client.Connect(options.Host, SMBTransportType.DirectTCPTransport);
-                    }
-
-                    if (!connected)
-                    {
-                        throw new ShareConnectionException(
-                            $"Failed to connect to '{options.Host}'.");
-                    }
-
-                    var loginStatus = client.Login(
-                        options.Domain ?? string.Empty,
-                        options.Username ?? string.Empty,
-                        options.Password ?? string.Empty);
-
-                    if (loginStatus != NTStatus.STATUS_SUCCESS)
-                    {
-                        NTStatusMapper.ThrowOnFailure(loginStatus);
-                    }
-
-                    return (IShareClient)new SmbShareClient(client, resilience);
-                }
-                catch
-                {
-                    try { client.Disconnect(); } catch { }
-                    throw;
-                }
+                return ConnectCore(options, resilience);
             }, ct), resilience);
         }
 
@@ -103,46 +73,94 @@ namespace SimpleShareLibrary.Providers.Smb
 
             var resilience = options.Resilience ?? new ResilienceOptions();
 
-            return RetryHelper.Execute(() =>
+            return RetryHelper.Execute(() => ConnectCore(options, resilience), resilience);
+        }
+
+        #endregion
+
+        #region Private Members
+
+        /// <summary>
+        /// Core connection logic shared by both async and sync paths.
+        /// </summary>
+        private IShareClient ConnectCore(ConnectionOptions options, ResilienceOptions resilience)
+        {
+            int port = options.Port;
+            bool useCustomPort = port != DefaultSmbPort;
+
+            // When a custom port is needed, create a PortAwareSMB2Client instead of using the factory
+            var client = useCustomPort
+                ? (ISMBClient)new PortAwareSMB2Client()
+                : _clientFactory();
+
+            try
             {
-                var client = _clientFactory();
-                try
+                bool connected = ConnectToHost(client, options.Host, port, useCustomPort);
+
+                if (!connected)
                 {
-                    bool connected;
-
-                    if (IPAddress.TryParse(options.Host, out IPAddress ip))
-                    {
-                        connected = client.Connect(ip, SMBTransportType.DirectTCPTransport);
-                    }
-                    else
-                    {
-                        connected = client.Connect(options.Host, SMBTransportType.DirectTCPTransport);
-                    }
-
-                    if (!connected)
-                    {
-                        throw new ShareConnectionException(
-                            $"Failed to connect to '{options.Host}'.");
-                    }
-
-                    var loginStatus = client.Login(
-                        options.Domain ?? string.Empty,
-                        options.Username ?? string.Empty,
-                        options.Password ?? string.Empty);
-
-                    if (loginStatus != NTStatus.STATUS_SUCCESS)
-                    {
-                        NTStatusMapper.ThrowOnFailure(loginStatus);
-                    }
-
-                    return (IShareClient)new SmbShareClient(client, resilience);
+                    throw new ShareConnectionException(
+                        $"Failed to connect to '{options.Host}:{port}'.");
                 }
-                catch
+
+                var loginStatus = client.Login(
+                    options.Domain ?? string.Empty,
+                    options.Username ?? string.Empty,
+                    options.Password ?? string.Empty);
+
+                if (loginStatus != NTStatus.STATUS_SUCCESS)
                 {
-                    try { client.Disconnect(); } catch { }
-                    throw;
+                    NTStatusMapper.ThrowOnFailure(loginStatus);
                 }
-            }, resilience);
+
+                return new SmbShareClient(client, resilience);
+            }
+            catch
+            {
+                try { client.Disconnect(); } catch { }
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Connects the SMB client to the specified host and port.
+        /// </summary>
+        private static bool ConnectToHost(ISMBClient client, string host, int port, bool useCustomPort)
+        {
+            if (useCustomPort)
+            {
+                // Custom port requires PortAwareSMB2Client and an IP address
+                var portClient = (PortAwareSMB2Client)client;
+                IPAddress ip = ResolveHost(host);
+                return portClient.ConnectOnPort(ip, SMBTransportType.DirectTCPTransport, port);
+            }
+
+            // Default port: use the standard ISMBClient.Connect overloads
+            if (IPAddress.TryParse(host, out IPAddress parsedIp))
+            {
+                return client.Connect(parsedIp, SMBTransportType.DirectTCPTransport);
+            }
+
+            return client.Connect(host, SMBTransportType.DirectTCPTransport);
+        }
+
+        /// <summary>
+        /// Resolves a hostname to an IP address. Returns the address directly if already an IP.
+        /// </summary>
+        private static IPAddress ResolveHost(string host)
+        {
+            if (IPAddress.TryParse(host, out IPAddress ip))
+            {
+                return ip;
+            }
+
+            var addresses = Dns.GetHostAddresses(host);
+            if (addresses.Length == 0)
+            {
+                throw new ShareConnectionException($"Could not resolve host '{host}'.");
+            }
+
+            return addresses[0];
         }
 
         #endregion

@@ -19,6 +19,9 @@ namespace SimpleShareLibrary
         /// <summary>The password for authentication.</summary>
         public string Password { get; set; }
 
+        /// <summary>The port to connect on. Defaults to 445 for SMB.</summary>
+        public int Port { get; set; } = 445;
+
         /// <summary>Retry and timeout resilience settings applied to all operations.</summary>
         public ResilienceOptions Resilience { get; set; } = new ResilienceOptions();
     }
