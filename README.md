@@ -1,5 +1,7 @@
 # SimpleShareLibrary
 
+> **Note:** This project is in early development. The API may change without notice and has not been validated in production environments. Use at your own risk.
+
 A simplified .NET Standard 2.0 wrapper around [SMBLibrary](https://github.com/TalAloni/SMBLibrary) by [Tal Aloni](https://github.com/TalAloni).
 
 ## Why?
