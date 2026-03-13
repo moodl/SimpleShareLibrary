@@ -1,10 +1,10 @@
-# SimpleSmbLibrary
+# SimpleShareLibrary
 
 A simplified .NET Standard 2.0 wrapper around [SMBLibrary](https://github.com/TalAloni/SMBLibrary) by [Tal Aloni](https://github.com/TalAloni).
 
 ## Why?
 
-SMBLibrary is a powerful, pure .NET SMB client/server implementation supporting SMB 1.0 through 3.1.1. However, its low-level API requires significant boilerplate for common operations. SimpleSmbLibrary provides an easy-to-use, optimistic API for everyday SMB file operations.
+SMBLibrary is a powerful, pure .NET SMB client/server implementation supporting SMB 1.0 through 3.1.1. However, its low-level API requires significant boilerplate for common operations. SimpleShareLibrary provides an easy-to-use, protocol-agnostic API for everyday SMB file operations.
 
 **Before (SMBLibrary):**
 ```csharp
@@ -30,7 +30,7 @@ if (isConnected)
 }
 ```
 
-**After (SimpleSmbLibrary):**
+**After (SimpleShareLibrary):**
 ```csharp
 using (var smb = new SmbClient("192.168.1.11", "Share", "user", "pass"))
 {
@@ -41,7 +41,7 @@ using (var smb = new SmbClient("192.168.1.11", "Share", "user", "pass"))
 ## Installation
 
 ```
-dotnet add package SimpleSmbLibrary
+dotnet add package SimpleShareLibrary
 ```
 
 ## License
