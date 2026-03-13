@@ -1,13 +1,12 @@
-name: CI
+name: Publish to NuGet
 
 on:
   push:
-    branches: [master, main]
-  pull_request:
-    branches: [master, main]
+    tags:
+      - 'v*'
 
 jobs:
-  build-and-test:
+  publish:
     runs-on: ubuntu-latest
 
     steps:
@@ -31,11 +30,8 @@ jobs:
       - name: Run integration tests
         run: dotnet test SimpleShareLibrary.IntegrationTests/SimpleShareLibrary.IntegrationTests.csproj --no-build --configuration Release --verbosity normal
 
-      - name: Pack NuGet package
+      - name: Pack
         run: dotnet pack SimpleShareLibrary/SimpleShareLibrary.csproj --no-build --configuration Release --output ./nupkg
 
-      - name: Upload NuGet package artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: nuget-package
-          path: ./nupkg/*.nupkg
+      - name: Publish to NuGet
+        run: dotnet nuget push ./nupkg/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
