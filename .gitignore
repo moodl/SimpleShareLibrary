@@ -37,8 +37,12 @@ venv/
 
 ## Project
 INSTRUCTIONS.md
-claude-artifacts/
 SMBLibrary-ref/
+
+## AI / tooling config
+CLAUDE.md
+AGENTS.md
+claude-artifacts/
 
 ## SSH keys and secrets
 id_rsa
