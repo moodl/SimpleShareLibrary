@@ -2,11 +2,11 @@
 
 > **Note:** This project is in early development. The API may change without notice and has not been validated in production environments. Use at your own risk.
 
-A simplified .NET Standard 2.0 wrapper around [SMBLibrary](https://github.com/TalAloni/SMBLibrary) by [Tal Aloni](https://github.com/TalAloni).
+A simplified, protocol-agnostic .NET Standard 2.0 wrapper for remote file share operations. Currently supports SMB via [SMBLibrary](https://github.com/TalAloni/SMBLibrary) by [Tal Aloni](https://github.com/TalAloni).
 
 ## Why?
 
-SMBLibrary is a powerful, pure .NET SMB client/server implementation supporting SMB 1.0 through 3.1.1. However, its low-level API requires significant boilerplate for common operations. SimpleShareLibrary provides an easy-to-use, protocol-agnostic API for everyday SMB file operations.
+SMBLibrary is a powerful, pure .NET SMB client/server implementation supporting SMB 1.0 through 3.1.1. However, its low-level API requires significant boilerplate for common operations. SimpleShareLibrary provides an easy-to-use API for everyday file operations on remote shares.
 
 **Before (SMBLibrary):**
 ```csharp
@@ -40,11 +40,26 @@ using (var smb = new SmbClient("192.168.1.11", "Share", "user", "pass"))
 }
 ```
 
+## Documentation
+
+See the [docs/](docs/) directory for detailed documentation:
+
+- [Getting Started](docs/getting-started.md) — installation, first connection, basic usage
+- [API Reference](docs/api-reference.md) — full interface and options documentation
+- [Architecture](docs/architecture.md) — how the library is structured, provider model
+- [Contributing](docs/contributing.md) — how to contribute, adding new protocol providers
+
 ## Installation
 
 ```
 dotnet add package SimpleShareLibrary
 ```
+
+## Contributing
+
+Contributions are welcome! The library is designed with a protocol-agnostic provider model — `IShareClientFactory`, `IShareClient`, and `IShare` are generic interfaces that any file sharing protocol can implement. Currently only SMB is supported, but adding providers for other protocols (NFS, SFTP, WebDAV, etc.) is straightforward.
+
+See [docs/contributing.md](docs/contributing.md) for details on how to get started.
 
 ## License
 
