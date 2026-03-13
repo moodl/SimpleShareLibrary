@@ -1,0 +1,97 @@
+name: Update Dependencies
+
+on:
+  schedule:
+    - cron: '0 6 * * 1' # Every Monday at 06:00 UTC
+  workflow_dispatch: # Allow manual trigger
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Install dotnet-outdated
+        run: dotnet tool install --global dotnet-outdated-tool
+
+      - name: Check for outdated packages
+        id: check
+        run: |
+          echo "=== Outdated packages ==="
+          dotnet outdated SimpleShareLibrary/SimpleShareLibrary.csproj || true
+          dotnet outdated SimpleShareLibrary.Tests/SimpleShareLibrary.Tests.csproj || true
+          dotnet outdated SimpleShareLibrary.IntegrationTests/SimpleShareLibrary.IntegrationTests.csproj || true
+
+      - name: Update packages
+        run: |
+          dotnet outdated SimpleShareLibrary/SimpleShareLibrary.csproj --upgrade || true
+          dotnet outdated SimpleShareLibrary.Tests/SimpleShareLibrary.Tests.csproj --upgrade || true
+          dotnet outdated SimpleShareLibrary.IntegrationTests/SimpleShareLibrary.IntegrationTests.csproj --upgrade || true
+
+      - name: Check for changes
+        id: changes
+        run: |
+          if git diff --quiet; then
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+            echo "No dependency updates found."
+          else
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+            echo "=== Changes ==="
+            git diff --stat
+          fi
+
+      - name: Restore and build
+        if: steps.changes.outputs.has_changes == 'true'
+        run: |
+          dotnet restore
+          dotnet build --no-restore --configuration Release
+
+      - name: Run unit tests
+        if: steps.changes.outputs.has_changes == 'true'
+        run: dotnet test SimpleShareLibrary.Tests/SimpleShareLibrary.Tests.csproj --no-build --configuration Release --verbosity normal
+
+      - name: Run integration tests
+        if: steps.changes.outputs.has_changes == 'true'
+        run: dotnet test SimpleShareLibrary.IntegrationTests/SimpleShareLibrary.IntegrationTests.csproj --no-build --configuration Release --verbosity normal
+
+      - name: Bump patch version and release
+        if: steps.changes.outputs.has_changes == 'true'
+        run: |
+          # Extract current version from csproj
+          CURRENT=$(grep '<Version>' SimpleShareLibrary/SimpleShareLibrary.csproj | sed 's/.*<Version>\(.*\)<\/Version>.*/\1/')
+          echo "Current version: $CURRENT"
+
+          # Strip prerelease suffix for parsing
+          BASE=$(echo "$CURRENT" | sed 's/-.*//')
+          SUFFIX=$(echo "$CURRENT" | grep -oP '\-.*' || echo "")
+
+          # Parse and bump patch
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$BASE"
+          PATCH=$((PATCH + 1))
+          NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}${SUFFIX}"
+          echo "New version: $NEW_VERSION"
+
+          # Update csproj
+          sed -i "s|<Version>.*</Version>|<Version>${NEW_VERSION}</Version>|" SimpleShareLibrary/SimpleShareLibrary.csproj
+          sed -i "s|<AssemblyVersion>.*</AssemblyVersion>|<AssemblyVersion>${MAJOR}.${MINOR}.${PATCH}.0</AssemblyVersion>|" SimpleShareLibrary/SimpleShareLibrary.csproj
+          sed -i "s|<FileVersion>.*</FileVersion>|<FileVersion>${MAJOR}.${MINOR}.${PATCH}.0</FileVersion>|" SimpleShareLibrary/SimpleShareLibrary.csproj
+
+          # Commit and tag
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Update dependencies, bump version to ${NEW_VERSION}"
+          git tag "v${NEW_VERSION}"
+          git push origin master --tags
