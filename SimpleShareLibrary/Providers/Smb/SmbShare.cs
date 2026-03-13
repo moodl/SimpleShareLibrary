@@ -42,7 +42,7 @@ namespace SimpleShareLibrary.Providers.Smb
 
         /// <summary>
         /// Asynchronously opens or creates a file or directory handle on the remote share.
-        /// Wraps the synchronous <see cref="ISMBFileStore.CreateFile"/> call via <see cref="Task.Run(System.Func{TResult})"/>.
+        /// Wraps the synchronous <c>ISMBFileStore.CreateFile</c> call via <c>Task.Run</c>.
         /// </summary>
         /// <param name="path">The normalized SMB path to the file or directory.</param>
         /// <param name="accessMask">The desired access rights (e.g. read, write, delete).</param>
@@ -80,7 +80,7 @@ namespace SimpleShareLibrary.Providers.Smb
 
         /// <summary>
         /// Asynchronously closes a previously opened file handle.
-        /// Wraps the synchronous <see cref="ISMBFileStore.CloseFile"/> call.
+        /// Wraps the synchronous <c>ISMBFileStore.CloseFile</c> call.
         /// </summary>
         /// <param name="handle">The file handle obtained from <see cref="CreateFileAsync"/>.</param>
         private Task CloseFileAsync(object handle)
@@ -90,7 +90,7 @@ namespace SimpleShareLibrary.Providers.Smb
 
         /// <summary>
         /// Asynchronously queries metadata for an open file handle.
-        /// Wraps the synchronous <see cref="ISMBFileStore.GetFileInformation"/> call.
+        /// Wraps the synchronous <c>ISMBFileStore.GetFileInformation</c> call.
         /// </summary>
         /// <param name="handle">The file handle obtained from <see cref="CreateFileAsync"/>.</param>
         /// <param name="informationClass">The type of metadata to retrieve.</param>
@@ -112,7 +112,7 @@ namespace SimpleShareLibrary.Providers.Smb
 
         /// <summary>
         /// Asynchronously enumerates entries in a directory.
-        /// Wraps the synchronous <see cref="ISMBFileStore.QueryDirectory"/> call.
+        /// Wraps the synchronous <c>ISMBFileStore.QueryDirectory</c> call.
         /// </summary>
         /// <param name="handle">The directory handle obtained from <see cref="CreateFileAsync"/>.</param>
         /// <param name="searchPattern">The wildcard pattern to filter entries.</param>
@@ -137,7 +137,7 @@ namespace SimpleShareLibrary.Providers.Smb
 
         /// <summary>
         /// Asynchronously sets metadata or performs operations (e.g. rename) on an open file handle.
-        /// Wraps the synchronous <see cref="ISMBFileStore.SetFileInformation"/> call.
+        /// Wraps the synchronous <c>ISMBFileStore.SetFileInformation</c> call.
         /// </summary>
         /// <param name="handle">The file handle obtained from <see cref="CreateFileAsync"/>.</param>
         /// <param name="information">The file information to set.</param>
@@ -153,7 +153,7 @@ namespace SimpleShareLibrary.Providers.Smb
 
         /// <summary>
         /// Synchronously opens or creates a file or directory handle on the remote share.
-        /// Calls <see cref="ISMBFileStore.CreateFile"/> directly on the calling thread.
+        /// Calls <c>ISMBFileStore.CreateFile</c> directly on the calling thread.
         /// </summary>
         /// <param name="path">The normalized SMB path to the file or directory.</param>
         /// <param name="accessMask">The desired access rights.</param>
