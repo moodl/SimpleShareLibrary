@@ -44,6 +44,22 @@ using (var smb = new SmbClient("192.168.1.11", "Share", "user", "pass"))
 dotnet add package SimpleSmbLibrary
 ```
 
+## License
+
+This project is licensed under the [MIT License](LICENSE).
+
+## Third-Party Dependencies
+
+This library uses [SMBLibrary](https://github.com/TalAloni/SMBLibrary) by **Tal Aloni** ([@TalAloni](https://github.com/TalAloni)) as a runtime NuGet dependency, licensed under [LGPL-3.0-or-later](LICENSES/LGPL-3.0.txt). SMBLibrary is **not** embedded or merged into this assembly — it remains a separate, replaceable component as required by the LGPL.
+
+All core SMB protocol implementation credit belongs to Tal Aloni and the SMBLibrary contributors.
+
+## Disclaimer
+
+This project is **not affiliated with, endorsed by, or sponsored by** Tal Aloni or the SMBLibrary project.
+
+This software is provided "as is", without warranty of any kind. See [DISCLAIMER.md](DISCLAIMER.md) for full details (English and German).
+
 ## Acknowledgments
 
-This library is built on top of [SMBLibrary](https://github.com/TalAloni/SMBLibrary) by **Tal Aloni** ([@TalAloni](https://github.com/TalAloni)), licensed under LGPL-3.0. All core SMB protocol implementation credit belongs to him and the SMBLibrary contributors.
+Built on top of [SMBLibrary](https://github.com/TalAloni/SMBLibrary) — a powerful, pure .NET SMB client/server implementation. Without SMBLibrary, this project would not exist.
