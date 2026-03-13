@@ -30,7 +30,7 @@ namespace SimpleShareLibrary.Providers.Smb
         /// <summary>Initializes a new instance wrapping the given SMB file store.</summary>
         /// <param name="fileStore">The SMB file store to operate on.</param>
         /// <param name="resilience">Retry and timeout settings. Uses defaults if <c>null</c>.</param>
-        internal SmbShare(ISMBFileStore fileStore, ResilienceOptions resilience = null)
+        internal SmbShare(ISMBFileStore fileStore, ResilienceOptions? resilience = null)
         {
             _fileStore = fileStore ?? throw new ArgumentNullException(nameof(fileStore));
             _resilience = resilience ?? new ResilienceOptions();
@@ -59,7 +59,7 @@ namespace SimpleShareLibrary.Providers.Smb
             ShareAccess shareAccess,
             CreateDisposition disposition,
             CreateOptions createOptions,
-            SecurityContext securityContext)
+            SecurityContext? securityContext)
         {
             return Task.Run(() =>
             {
@@ -170,7 +170,7 @@ namespace SimpleShareLibrary.Providers.Smb
             ShareAccess shareAccess,
             CreateDisposition disposition,
             CreateOptions createOptions,
-            SecurityContext securityContext)
+            SecurityContext? securityContext)
         {
             var status = _fileStore.CreateFile(
                 out object handle,
@@ -260,7 +260,7 @@ namespace SimpleShareLibrary.Providers.Smb
             ShareAccess shareAccess,
             CreateDisposition disposition,
             CreateOptions createOptions,
-            SecurityContext securityContext)
+            SecurityContext? securityContext)
         {
             if (useAsync)
             {
@@ -801,7 +801,7 @@ namespace SimpleShareLibrary.Providers.Smb
         }
 
         /// <inheritdoc />
-        public async Task<string> ReadAllTextAsync(string path, Encoding encoding = null, CancellationToken ct = default)
+        public async Task<string> ReadAllTextAsync(string path, Encoding? encoding = null, CancellationToken ct = default)
         {
             ThrowIfDisposed();
             var bytes = await ReadAllBytesAsync(path, ct).ConfigureAwait(false);
@@ -841,7 +841,7 @@ namespace SimpleShareLibrary.Providers.Smb
         }
 
         /// <inheritdoc />
-        public string ReadAllText(string path, Encoding encoding = null)
+        public string ReadAllText(string path, Encoding? encoding = null)
         {
             ThrowIfDisposed();
             var bytes = ReadAllBytes(path);
@@ -880,7 +880,7 @@ namespace SimpleShareLibrary.Providers.Smb
         }
 
         /// <inheritdoc />
-        public Task WriteAllTextAsync(string path, string text, Encoding encoding = null, bool overwrite = true, CancellationToken ct = default)
+        public Task WriteAllTextAsync(string path, string text, Encoding? encoding = null, bool overwrite = true, CancellationToken ct = default)
         {
             ThrowIfDisposed();
             var bytes = (encoding ?? Encoding.UTF8).GetBytes(text);
@@ -914,7 +914,7 @@ namespace SimpleShareLibrary.Providers.Smb
         }
 
         /// <inheritdoc />
-        public void WriteAllText(string path, string text, Encoding encoding = null, bool overwrite = true)
+        public void WriteAllText(string path, string text, Encoding? encoding = null, bool overwrite = true)
         {
             ThrowIfDisposed();
             var bytes = (encoding ?? Encoding.UTF8).GetBytes(text);
@@ -937,7 +937,7 @@ namespace SimpleShareLibrary.Providers.Smb
         #region Copy — Async
 
         /// <inheritdoc />
-        public async Task CopyFileAsync(string src, string dst, CopyOptions options = null, CancellationToken ct = default)
+        public async Task CopyFileAsync(string src, string dst, CopyOptions? options = null, CancellationToken ct = default)
         {
             ThrowIfDisposed();
             ct.ThrowIfCancellationRequested();
@@ -969,7 +969,7 @@ namespace SimpleShareLibrary.Providers.Smb
         }
 
         /// <inheritdoc />
-        public async Task CopyDirectoryAsync(string src, string dst, CopyOptions options = null, CancellationToken ct = default)
+        public async Task CopyDirectoryAsync(string src, string dst, CopyOptions? options = null, CancellationToken ct = default)
         {
             ThrowIfDisposed();
             ct.ThrowIfCancellationRequested();
@@ -1002,7 +1002,7 @@ namespace SimpleShareLibrary.Providers.Smb
         #region Copy — Sync
 
         /// <inheritdoc />
-        public void CopyFile(string src, string dst, CopyOptions options = null)
+        public void CopyFile(string src, string dst, CopyOptions? options = null)
         {
             ThrowIfDisposed();
             options = options ?? new CopyOptions();
@@ -1025,7 +1025,7 @@ namespace SimpleShareLibrary.Providers.Smb
         }
 
         /// <inheritdoc />
-        public void CopyDirectory(string src, string dst, CopyOptions options = null)
+        public void CopyDirectory(string src, string dst, CopyOptions? options = null)
         {
             ThrowIfDisposed();
             options = options ?? new CopyOptions();
@@ -1056,7 +1056,7 @@ namespace SimpleShareLibrary.Providers.Smb
         #region Move — Async
 
         /// <inheritdoc />
-        public async Task MoveFileAsync(string src, string dst, MoveOptions options = null, CancellationToken ct = default)
+        public async Task MoveFileAsync(string src, string dst, MoveOptions? options = null, CancellationToken ct = default)
         {
             ThrowIfDisposed();
             ct.ThrowIfCancellationRequested();
@@ -1077,7 +1077,7 @@ namespace SimpleShareLibrary.Providers.Smb
         }
 
         /// <inheritdoc />
-        public async Task MoveDirectoryAsync(string src, string dst, MoveOptions options = null, CancellationToken ct = default)
+        public async Task MoveDirectoryAsync(string src, string dst, MoveOptions? options = null, CancellationToken ct = default)
         {
             ThrowIfDisposed();
             ct.ThrowIfCancellationRequested();
@@ -1102,7 +1102,7 @@ namespace SimpleShareLibrary.Providers.Smb
         #region Move — Sync
 
         /// <inheritdoc />
-        public void MoveFile(string src, string dst, MoveOptions options = null)
+        public void MoveFile(string src, string dst, MoveOptions? options = null)
         {
             ThrowIfDisposed();
             options = options ?? new MoveOptions();
@@ -1122,7 +1122,7 @@ namespace SimpleShareLibrary.Providers.Smb
         }
 
         /// <inheritdoc />
-        public void MoveDirectory(string src, string dst, MoveOptions options = null)
+        public void MoveDirectory(string src, string dst, MoveOptions? options = null)
         {
             ThrowIfDisposed();
             options = options ?? new MoveOptions();

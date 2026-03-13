@@ -109,7 +109,9 @@ public class SmbFileStreamTests
             .Returns(NTStatus.STATUS_SUCCESS);
 
         using var stream = new SmbFileStream(_mockStore.Object, _handle, canRead: true, canWrite: false);
-        stream.Read(new byte[10], 0, 3);
+        var buffer = new byte[10];
+        int bytesRead = stream.Read(buffer, 0, 3);
+        Assert.AreEqual(3, bytesRead);
         Assert.AreEqual(3, stream.Position);
     }
 

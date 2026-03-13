@@ -7,17 +7,17 @@ namespace SimpleShareLibrary
     /// </summary>
     public class ConnectionOptions
     {
-        /// <summary>The hostname or IP address of the remote server.</summary>
-        public string Host { get; set; }
+        /// <summary>The hostname or IP address of the remote server. Required.</summary>
+        public string Host { get; set; } = null!;
 
         /// <summary>The authentication domain. Defaults to empty (no domain).</summary>
         public string Domain { get; set; } = string.Empty;
 
-        /// <summary>The username for authentication.</summary>
-        public string Username { get; set; }
+        /// <summary>The username for authentication. Null for anonymous/guest access.</summary>
+        public string? Username { get; set; }
 
-        /// <summary>The password for authentication.</summary>
-        public string Password { get; set; }
+        /// <summary>The password for authentication. Null for anonymous/guest access.</summary>
+        public string? Password { get; set; }
 
         /// <summary>The port to connect on. Defaults to 445 for SMB.</summary>
         public int Port { get; set; } = 445;

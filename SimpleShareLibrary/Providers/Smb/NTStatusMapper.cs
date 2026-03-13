@@ -17,7 +17,7 @@ namespace SimpleShareLibrary.Providers.Smb
         /// <param name="status">The SMB status code to evaluate.</param>
         /// <param name="path">Optional file or directory path included in the exception message.</param>
         /// <exception cref="ShareException">Thrown when <paramref name="status"/> is not <see cref="NTStatus.STATUS_SUCCESS"/>.</exception>
-        internal static void ThrowOnFailure(NTStatus status, string path = null)
+        internal static void ThrowOnFailure(NTStatus status, string? path = null)
         {
             if (status == NTStatus.STATUS_SUCCESS)
                 return;
@@ -52,7 +52,7 @@ namespace SimpleShareLibrary.Providers.Smb
         /// <param name="status">The failing SMB status code.</param>
         /// <param name="path">The file or directory path associated with the failure.</param>
         /// <returns>A <see cref="ShareException"/> subclass matching the failure type.</returns>
-        private static ShareException ToException(NTStatus status, string path)
+        private static ShareException ToException(NTStatus status, string? path)
         {
             switch (status)
             {

@@ -26,7 +26,7 @@ namespace SimpleShareLibrary.Providers.Smb
         /// <summary>Initializes a new instance wrapping the given SMB client session.</summary>
         /// <param name="client">The connected and authenticated SMB client.</param>
         /// <param name="resilience">Retry and timeout settings. Uses defaults if <c>null</c>.</param>
-        internal SmbShareClient(ISMBClient client, ResilienceOptions resilience = null)
+        internal SmbShareClient(ISMBClient client, ResilienceOptions? resilience = null)
         {
             _client = client ?? throw new ArgumentNullException(nameof(client));
             _resilience = resilience ?? new ResilienceOptions();

@@ -12,13 +12,13 @@ namespace SimpleShareLibrary.Providers.Smb
         /// </summary>
         /// <param name="path">The raw path to normalize. May be <c>null</c> or empty.</param>
         /// <returns>The normalized path, or <see cref="string.Empty"/> if <paramref name="path"/> is <c>null</c> or empty.</returns>
-        internal static string Normalize(string path)
+        internal static string Normalize(string? path)
         {
             if (string.IsNullOrEmpty(path))
                 return string.Empty;
 
             // Replace forward slashes with backslashes
-            var normalized = path.Replace('/', '\\');
+            var normalized = path!.Replace('/', '\\');
 
             // Trim leading and trailing backslashes
             normalized = normalized.Trim('\\');

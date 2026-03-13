@@ -8,10 +8,10 @@ namespace SimpleShareLibrary
     public class ShareFileInfo
     {
         /// <summary>The file or directory name (without path).</summary>
-        public string Name { get; set; }
+        public string Name { get; set; } = null!;
 
         /// <summary>The full path relative to the share root.</summary>
-        public string FullPath { get; set; }
+        public string FullPath { get; set; } = null!;
 
         /// <summary>Whether this entry represents a directory.</summary>
         public bool IsDirectory { get; set; }

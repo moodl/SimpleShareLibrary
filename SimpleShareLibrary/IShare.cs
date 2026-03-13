@@ -71,10 +71,10 @@ namespace SimpleShareLibrary
         /// <param name="encoding">Text encoding. Defaults to UTF-8.</param>
         /// <param name="ct">Cancellation token.</param>
         /// <returns>The file contents as a string.</returns>
-        Task<string> ReadAllTextAsync(string path, Encoding encoding = null, CancellationToken ct = default);
+        Task<string> ReadAllTextAsync(string path, Encoding? encoding = null, CancellationToken ct = default);
 
         /// <inheritdoc cref="ReadAllTextAsync"/>
-        string ReadAllText(string path, Encoding encoding = null);
+        string ReadAllText(string path, Encoding? encoding = null);
 
         /// <summary>Opens a read-only stream to the specified file.</summary>
         /// <param name="path">The file path.</param>
@@ -105,10 +105,10 @@ namespace SimpleShareLibrary
         /// <param name="encoding">Text encoding. Defaults to UTF-8.</param>
         /// <param name="overwrite">Whether to overwrite an existing file. Defaults to <c>true</c>.</param>
         /// <param name="ct">Cancellation token.</param>
-        Task WriteAllTextAsync(string path, string text, Encoding encoding = null, bool overwrite = true, CancellationToken ct = default);
+        Task WriteAllTextAsync(string path, string text, Encoding? encoding = null, bool overwrite = true, CancellationToken ct = default);
 
         /// <inheritdoc cref="WriteAllTextAsync"/>
-        void WriteAllText(string path, string text, Encoding encoding = null, bool overwrite = true);
+        void WriteAllText(string path, string text, Encoding? encoding = null, bool overwrite = true);
 
         /// <summary>Opens a write stream to the specified file.</summary>
         /// <param name="path">The destination file path.</param>
@@ -129,20 +129,20 @@ namespace SimpleShareLibrary
         /// <param name="dst">The destination file path.</param>
         /// <param name="options">Copy options. Uses defaults if <c>null</c>.</param>
         /// <param name="ct">Cancellation token.</param>
-        Task CopyFileAsync(string src, string dst, CopyOptions options = null, CancellationToken ct = default);
+        Task CopyFileAsync(string src, string dst, CopyOptions? options = null, CancellationToken ct = default);
 
         /// <inheritdoc cref="CopyFileAsync"/>
-        void CopyFile(string src, string dst, CopyOptions options = null);
+        void CopyFile(string src, string dst, CopyOptions? options = null);
 
         /// <summary>Copies a directory and its contents from source to destination.</summary>
         /// <param name="src">The source directory path.</param>
         /// <param name="dst">The destination directory path.</param>
         /// <param name="options">Copy options. Uses defaults if <c>null</c>.</param>
         /// <param name="ct">Cancellation token.</param>
-        Task CopyDirectoryAsync(string src, string dst, CopyOptions options = null, CancellationToken ct = default);
+        Task CopyDirectoryAsync(string src, string dst, CopyOptions? options = null, CancellationToken ct = default);
 
         /// <inheritdoc cref="CopyDirectoryAsync"/>
-        void CopyDirectory(string src, string dst, CopyOptions options = null);
+        void CopyDirectory(string src, string dst, CopyOptions? options = null);
 
         #endregion
 
@@ -153,20 +153,20 @@ namespace SimpleShareLibrary
         /// <param name="dst">The destination file path.</param>
         /// <param name="options">Move options. Uses defaults if <c>null</c>.</param>
         /// <param name="ct">Cancellation token.</param>
-        Task MoveFileAsync(string src, string dst, MoveOptions options = null, CancellationToken ct = default);
+        Task MoveFileAsync(string src, string dst, MoveOptions? options = null, CancellationToken ct = default);
 
         /// <inheritdoc cref="MoveFileAsync"/>
-        void MoveFile(string src, string dst, MoveOptions options = null);
+        void MoveFile(string src, string dst, MoveOptions? options = null);
 
         /// <summary>Moves a directory. Uses safe copy-then-delete by default.</summary>
         /// <param name="src">The source directory path.</param>
         /// <param name="dst">The destination directory path.</param>
         /// <param name="options">Move options. Uses defaults if <c>null</c>.</param>
         /// <param name="ct">Cancellation token.</param>
-        Task MoveDirectoryAsync(string src, string dst, MoveOptions options = null, CancellationToken ct = default);
+        Task MoveDirectoryAsync(string src, string dst, MoveOptions? options = null, CancellationToken ct = default);
 
         /// <inheritdoc cref="MoveDirectoryAsync"/>
-        void MoveDirectory(string src, string dst, MoveOptions options = null);
+        void MoveDirectory(string src, string dst, MoveOptions? options = null);
 
         #endregion
 
