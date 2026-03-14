@@ -53,7 +53,7 @@ namespace SimpleShareLibrary.Providers.Smb
         public override bool CanWrite => _canWrite && !_disposed;
 
         /// <inheritdoc />
-        public override bool CanSeek => true;
+        public override bool CanSeek => false;
 
         /// <inheritdoc />
         public override long Length => throw new NotSupportedException("SMB streams do not support Length.");

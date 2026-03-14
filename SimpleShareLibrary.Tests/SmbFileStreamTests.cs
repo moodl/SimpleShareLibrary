@@ -178,10 +178,10 @@ public class SmbFileStreamTests
     #region Properties
 
     [TestMethod]
-    public void CanSeek_ReturnsTrue()
+    public void CanSeek_ReturnsFalse()
     {
         using var stream = new SmbFileStream(_mockStore.Object, _handle, canRead: true, canWrite: false);
-        Assert.IsTrue(stream.CanSeek);
+        Assert.IsFalse(stream.CanSeek);
     }
 
     [TestMethod]
