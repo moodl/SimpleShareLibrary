@@ -431,49 +431,47 @@ namespace SimpleShareLibrary.Providers.Smb
             {
                 var results = new List<ShareFileInfo>();
 
-                while (true)
+                // SMB2FileStore.QueryDirectory handles pagination internally — it accumulates
+                // all entries across pages and returns STATUS_NO_MORE_FILES as the final status.
+                // A single call is sufficient; STATUS_NO_MORE_FILES indicates success here.
+                var (queryStatus, entries) = await QueryDirectoryCore(
+                    useAsync,
+                    handle,
+                    "*",
+                    FileInformationClass.FileDirectoryInformation).ConfigureAwait(false);
+
+                if (queryStatus != NTStatus.STATUS_NO_MORE_FILES)
                 {
-                    var (queryStatus, entries) = await QueryDirectoryCore(
-                        useAsync,
-                        handle,
-                        "*",
-                        FileInformationClass.FileDirectoryInformation).ConfigureAwait(false);
-
-                    if (queryStatus == NTStatus.STATUS_NO_MORE_FILES)
-                    {
-                        break;
-                    }
-
                     NTStatusMapper.ThrowOnFailure(queryStatus, normalizedPath);
+                }
 
-                    foreach (var entry in entries)
+                foreach (var entry in entries)
+                {
+                    if (entry is FileDirectoryInformation dirInfo)
                     {
-                        if (entry is FileDirectoryInformation dirInfo)
+                        var name = dirInfo.FileName;
+                        if (name == "." || name == "..")
                         {
-                            var name = dirInfo.FileName;
-                            if (name == "." || name == "..")
-                            {
-                                continue;
-                            }
-
-                            if (!MatchesPattern(name, pattern))
-                            {
-                                continue;
-                            }
-
-                            results.Add(new ShareFileInfo
-                            {
-                                Name = name,
-                                FullPath = PathHelper.Combine(normalizedPath, name),
-                                IsDirectory = (dirInfo.FileAttributes & SMBLibrary.FileAttributes.Directory) != 0,
-                                Size = dirInfo.EndOfFile,
-                                CreatedUtc = dirInfo.CreationTime.ToUniversalTime(),
-                                LastWriteUtc = dirInfo.LastWriteTime.ToUniversalTime(),
-                                LastAccessUtc = dirInfo.LastAccessTime.ToUniversalTime(),
-                                IsReadOnly = (dirInfo.FileAttributes & SMBLibrary.FileAttributes.ReadOnly) != 0,
-                                IsHidden = (dirInfo.FileAttributes & SMBLibrary.FileAttributes.Hidden) != 0,
-                            });
+                            continue;
                         }
+
+                        if (!MatchesPattern(name, pattern))
+                        {
+                            continue;
+                        }
+
+                        results.Add(new ShareFileInfo
+                        {
+                            Name = name,
+                            FullPath = PathHelper.Combine(normalizedPath, name),
+                            IsDirectory = (dirInfo.FileAttributes & SMBLibrary.FileAttributes.Directory) != 0,
+                            Size = dirInfo.EndOfFile,
+                            CreatedUtc = dirInfo.CreationTime.ToUniversalTime(),
+                            LastWriteUtc = dirInfo.LastWriteTime.ToUniversalTime(),
+                            LastAccessUtc = dirInfo.LastAccessTime.ToUniversalTime(),
+                            IsReadOnly = (dirInfo.FileAttributes & SMBLibrary.FileAttributes.ReadOnly) != 0,
+                            IsHidden = (dirInfo.FileAttributes & SMBLibrary.FileAttributes.Hidden) != 0,
+                        });
                     }
                 }
 

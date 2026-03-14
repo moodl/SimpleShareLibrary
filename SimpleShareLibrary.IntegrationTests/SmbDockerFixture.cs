@@ -66,7 +66,7 @@ public static class SmbDockerFixture
             .WithPortBinding(ContainerSmbPort, true)
             .WithCommand(
                 "-u", $"{Username};{Password}",
-                "-s", $"{ShareName};/share;no;no;no;{Username};{Username};{Username}",
+                "-s", $"{ShareName};/share;yes;no;no;{Username};{Username};{Username}",
                 "-s", $"{ReadOnlyShareName};/readonly;yes;no;no;{Username};{Username};{Username}",
                 "-p")
             .WithWaitStrategy(Wait.ForUnixContainer()
