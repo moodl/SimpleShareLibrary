@@ -1,7 +1,5 @@
 # SimpleShareLibrary
 
-> **Note:** This project is in early development. The API may change without notice and has not been validated in production environments. Use at your own risk.
-
 A simplified, protocol-agnostic .NET Standard 2.0 wrapper for remote file share operations. Currently supports SMB via [SMBLibrary](https://github.com/TalAloni/SMBLibrary) by [Tal Aloni](https://github.com/TalAloni).
 
 ## Why?
