@@ -1,5 +1,7 @@
 # SimpleShareLibrary
 
+[![NuGet](https://img.shields.io/nuget/v/SimpleShareLibrary.svg)](https://www.nuget.org/packages/SimpleShareLibrary/)
+
 A simplified, protocol-agnostic .NET Standard 2.0 wrapper for remote file share operations. Currently supports SMB via [SMBLibrary](https://github.com/TalAloni/SMBLibrary) by [Tal Aloni](https://github.com/TalAloni).
 
 ## Why?
