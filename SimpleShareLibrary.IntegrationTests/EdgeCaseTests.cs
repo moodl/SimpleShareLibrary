@@ -206,7 +206,7 @@ public class EdgeCaseTests
         using var __ = share;
 
         // Act & Assert — GetInfo on a non-existent path throws ShareFileNotFoundException
-        await Assert.ThrowsExceptionAsync<ShareFileNotFoundException>(
+        await Assert.ThrowsExactlyAsync<ShareFileNotFoundException>(
             () => share.GetInfoAsync($"nonexistent-{Guid.NewGuid()}"));
     }
 

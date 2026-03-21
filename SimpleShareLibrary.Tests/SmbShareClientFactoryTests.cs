@@ -71,7 +71,7 @@ public class SmbShareClientFactoryTests
             Resilience = new ResilienceOptions { MaxRetries = 0 }
         };
 
-        await Assert.ThrowsExceptionAsync<ShareConnectionException>(
+        await Assert.ThrowsExactlyAsync<ShareConnectionException>(
             () => factory.ConnectAsync(options));
     }
 
@@ -92,7 +92,7 @@ public class SmbShareClientFactoryTests
             Resilience = new ResilienceOptions { MaxRetries = 0 }
         };
 
-        await Assert.ThrowsExceptionAsync<ShareAuthenticationException>(
+        await Assert.ThrowsExactlyAsync<ShareAuthenticationException>(
             () => factory.ConnectAsync(options));
 
         // Should disconnect on auth failure
@@ -104,7 +104,7 @@ public class SmbShareClientFactoryTests
     {
         var factory = new SmbShareClientFactory(() => new Mock<ISMBClient>().Object);
 
-        await Assert.ThrowsExceptionAsync<ArgumentNullException>(
+        await Assert.ThrowsExactlyAsync<ArgumentNullException>(
             () => factory.ConnectAsync(null!));
     }
 
@@ -114,7 +114,7 @@ public class SmbShareClientFactoryTests
         var factory = new SmbShareClientFactory(() => new Mock<ISMBClient>().Object);
         var options = new ConnectionOptions { Host = "" };
 
-        await Assert.ThrowsExceptionAsync<ArgumentException>(
+        await Assert.ThrowsExactlyAsync<ArgumentException>(
             () => factory.ConnectAsync(options));
     }
 
@@ -127,7 +127,7 @@ public class SmbShareClientFactoryTests
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
-        await Assert.ThrowsExceptionAsync<TaskCanceledException>(
+        await Assert.ThrowsExactlyAsync<TaskCanceledException>(
             () => factory.ConnectAsync(options, cts.Token));
     }
 
@@ -210,7 +210,7 @@ public class SmbShareClientFactoryTests
             Resilience = new ResilienceOptions { MaxRetries = 0 }
         };
 
-        Assert.ThrowsException<ShareConnectionException>(
+        Assert.ThrowsExactly<ShareConnectionException>(
             () => factory.Connect(options));
     }
 
@@ -231,7 +231,7 @@ public class SmbShareClientFactoryTests
             Resilience = new ResilienceOptions { MaxRetries = 0 }
         };
 
-        Assert.ThrowsException<ShareAuthenticationException>(
+        Assert.ThrowsExactly<ShareAuthenticationException>(
             () => factory.Connect(options));
 
         mockClient.Verify(c => c.Disconnect(), Times.Once);
@@ -242,7 +242,7 @@ public class SmbShareClientFactoryTests
     {
         var factory = new SmbShareClientFactory(() => new Mock<ISMBClient>().Object);
 
-        Assert.ThrowsException<ArgumentNullException>(
+        Assert.ThrowsExactly<ArgumentNullException>(
             () => factory.Connect(null!));
     }
 
@@ -252,7 +252,7 @@ public class SmbShareClientFactoryTests
         var factory = new SmbShareClientFactory(() => new Mock<ISMBClient>().Object);
         var options = new ConnectionOptions { Host = "" };
 
-        Assert.ThrowsException<ArgumentException>(
+        Assert.ThrowsExactly<ArgumentException>(
             () => factory.Connect(options));
     }
 

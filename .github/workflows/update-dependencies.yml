@@ -36,9 +36,9 @@ jobs:
 
       - name: Update packages
         run: |
-          dotnet outdated SimpleShareLibrary/SimpleShareLibrary.csproj --upgrade || true
-          dotnet outdated SimpleShareLibrary.Tests/SimpleShareLibrary.Tests.csproj --upgrade || true
-          dotnet outdated SimpleShareLibrary.IntegrationTests/SimpleShareLibrary.IntegrationTests.csproj --upgrade || true
+          dotnet outdated SimpleShareLibrary/SimpleShareLibrary.csproj --upgrade --version-lock Major || true
+          dotnet outdated SimpleShareLibrary.Tests/SimpleShareLibrary.Tests.csproj --upgrade --version-lock Major || true
+          dotnet outdated SimpleShareLibrary.IntegrationTests/SimpleShareLibrary.IntegrationTests.csproj --upgrade --version-lock Major || true
 
       - name: Check for changes
         id: changes
