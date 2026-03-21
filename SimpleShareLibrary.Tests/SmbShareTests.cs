@@ -66,7 +66,7 @@ public class SmbShareTests
     {
         SetupCreateFile(NTStatus.STATUS_ACCESS_DENIED);
 
-        await Assert.ThrowsExceptionAsync<ShareAccessDeniedException>(
+        await Assert.ThrowsExactlyAsync<ShareAccessDeniedException>(
             () => _share.ExistsAsync("secret.txt"));
     }
 
@@ -89,7 +89,7 @@ public class SmbShareTests
     {
         SetupCreateFile(NTStatus.STATUS_OBJECT_NAME_NOT_FOUND);
 
-        await Assert.ThrowsExceptionAsync<ShareFileNotFoundException>(
+        await Assert.ThrowsExactlyAsync<ShareFileNotFoundException>(
             () => _share.DeleteFileAsync("missing.txt"));
     }
 
@@ -216,7 +216,7 @@ public class SmbShareTests
     {
         SetupCreateFileSuccess();
 
-        await Assert.ThrowsExceptionAsync<ShareAlreadyExistsException>(
+        await Assert.ThrowsExactlyAsync<ShareAlreadyExistsException>(
             () => _share.CopyFileAsync("src.txt", "dst.txt", new CopyOptions { Overwrite = false }));
     }
 
@@ -244,49 +244,49 @@ public class SmbShareTests
     public async Task ExistsAsync_AfterDispose_ThrowsObjectDisposedException()
     {
         _share.Dispose();
-        await Assert.ThrowsExceptionAsync<ObjectDisposedException>(() => _share.ExistsAsync("test.txt"));
+        await Assert.ThrowsExactlyAsync<ObjectDisposedException>(() => _share.ExistsAsync("test.txt"));
     }
 
     [TestMethod]
     public async Task ReadAllBytesAsync_AfterDispose_ThrowsObjectDisposedException()
     {
         _share.Dispose();
-        await Assert.ThrowsExceptionAsync<ObjectDisposedException>(() => _share.ReadAllBytesAsync("test.txt"));
+        await Assert.ThrowsExactlyAsync<ObjectDisposedException>(() => _share.ReadAllBytesAsync("test.txt"));
     }
 
     [TestMethod]
     public async Task WriteAllBytesAsync_AfterDispose_ThrowsObjectDisposedException()
     {
         _share.Dispose();
-        await Assert.ThrowsExceptionAsync<ObjectDisposedException>(() => _share.WriteAllBytesAsync("test.txt", new byte[] { 1 }));
+        await Assert.ThrowsExactlyAsync<ObjectDisposedException>(() => _share.WriteAllBytesAsync("test.txt", new byte[] { 1 }));
     }
 
     [TestMethod]
     public async Task DeleteFileAsync_AfterDispose_ThrowsObjectDisposedException()
     {
         _share.Dispose();
-        await Assert.ThrowsExceptionAsync<ObjectDisposedException>(() => _share.DeleteFileAsync("test.txt"));
+        await Assert.ThrowsExactlyAsync<ObjectDisposedException>(() => _share.DeleteFileAsync("test.txt"));
     }
 
     [TestMethod]
     public async Task ListAsync_AfterDispose_ThrowsObjectDisposedException()
     {
         _share.Dispose();
-        await Assert.ThrowsExceptionAsync<ObjectDisposedException>(() => _share.ListAsync("dir"));
+        await Assert.ThrowsExactlyAsync<ObjectDisposedException>(() => _share.ListAsync("dir"));
     }
 
     [TestMethod]
     public async Task CreateDirectoryAsync_AfterDispose_ThrowsObjectDisposedException()
     {
         _share.Dispose();
-        await Assert.ThrowsExceptionAsync<ObjectDisposedException>(() => _share.CreateDirectoryAsync("dir"));
+        await Assert.ThrowsExactlyAsync<ObjectDisposedException>(() => _share.CreateDirectoryAsync("dir"));
     }
 
     [TestMethod]
     public async Task RenameAsync_AfterDispose_ThrowsObjectDisposedException()
     {
         _share.Dispose();
-        await Assert.ThrowsExceptionAsync<ObjectDisposedException>(() => _share.RenameAsync("old", "new"));
+        await Assert.ThrowsExactlyAsync<ObjectDisposedException>(() => _share.RenameAsync("old", "new"));
     }
 
     #endregion
@@ -298,7 +298,7 @@ public class SmbShareTests
     {
         using var cts = new CancellationTokenSource();
         cts.Cancel();
-        await Assert.ThrowsExceptionAsync<OperationCanceledException>(() => _share.ExistsAsync("test.txt", cts.Token));
+        await Assert.ThrowsExactlyAsync<OperationCanceledException>(() => _share.ExistsAsync("test.txt", cts.Token));
     }
 
     [TestMethod]
@@ -306,7 +306,7 @@ public class SmbShareTests
     {
         using var cts = new CancellationTokenSource();
         cts.Cancel();
-        await Assert.ThrowsExceptionAsync<OperationCanceledException>(() => _share.ReadAllBytesAsync("test.txt", cts.Token));
+        await Assert.ThrowsExactlyAsync<OperationCanceledException>(() => _share.ReadAllBytesAsync("test.txt", cts.Token));
     }
 
     #endregion
@@ -339,7 +339,7 @@ public class SmbShareTests
     {
         SetupCreateFile(NTStatus.STATUS_ACCESS_DENIED);
 
-        Assert.ThrowsException<ShareAccessDeniedException>(
+        Assert.ThrowsExactly<ShareAccessDeniedException>(
             () => _share.Exists("secret.txt"));
     }
 
@@ -362,7 +362,7 @@ public class SmbShareTests
     {
         SetupCreateFile(NTStatus.STATUS_OBJECT_NAME_NOT_FOUND);
 
-        Assert.ThrowsException<ShareFileNotFoundException>(
+        Assert.ThrowsExactly<ShareFileNotFoundException>(
             () => _share.DeleteFile("missing.txt"));
     }
 
@@ -480,7 +480,7 @@ public class SmbShareTests
     {
         SetupCreateFileSuccess();
 
-        Assert.ThrowsException<ShareAlreadyExistsException>(
+        Assert.ThrowsExactly<ShareAlreadyExistsException>(
             () => _share.CopyFile("src.txt", "dst.txt", new CopyOptions { Overwrite = false }));
     }
 
@@ -508,49 +508,49 @@ public class SmbShareTests
     public void Exists_AfterDispose_ThrowsObjectDisposedException()
     {
         _share.Dispose();
-        Assert.ThrowsException<ObjectDisposedException>(() => _share.Exists("test.txt"));
+        Assert.ThrowsExactly<ObjectDisposedException>(() => _share.Exists("test.txt"));
     }
 
     [TestMethod]
     public void ReadAllBytes_AfterDispose_ThrowsObjectDisposedException()
     {
         _share.Dispose();
-        Assert.ThrowsException<ObjectDisposedException>(() => _share.ReadAllBytes("test.txt"));
+        Assert.ThrowsExactly<ObjectDisposedException>(() => _share.ReadAllBytes("test.txt"));
     }
 
     [TestMethod]
     public void WriteAllBytes_AfterDispose_ThrowsObjectDisposedException()
     {
         _share.Dispose();
-        Assert.ThrowsException<ObjectDisposedException>(() => _share.WriteAllBytes("test.txt", new byte[] { 1 }));
+        Assert.ThrowsExactly<ObjectDisposedException>(() => _share.WriteAllBytes("test.txt", new byte[] { 1 }));
     }
 
     [TestMethod]
     public void DeleteFile_AfterDispose_ThrowsObjectDisposedException()
     {
         _share.Dispose();
-        Assert.ThrowsException<ObjectDisposedException>(() => _share.DeleteFile("test.txt"));
+        Assert.ThrowsExactly<ObjectDisposedException>(() => _share.DeleteFile("test.txt"));
     }
 
     [TestMethod]
     public void List_AfterDispose_ThrowsObjectDisposedException()
     {
         _share.Dispose();
-        Assert.ThrowsException<ObjectDisposedException>(() => _share.List("dir"));
+        Assert.ThrowsExactly<ObjectDisposedException>(() => _share.List("dir"));
     }
 
     [TestMethod]
     public void CreateDirectory_AfterDispose_ThrowsObjectDisposedException()
     {
         _share.Dispose();
-        Assert.ThrowsException<ObjectDisposedException>(() => _share.CreateDirectory("dir"));
+        Assert.ThrowsExactly<ObjectDisposedException>(() => _share.CreateDirectory("dir"));
     }
 
     [TestMethod]
     public void Rename_AfterDispose_ThrowsObjectDisposedException()
     {
         _share.Dispose();
-        Assert.ThrowsException<ObjectDisposedException>(() => _share.Rename("old", "new"));
+        Assert.ThrowsExactly<ObjectDisposedException>(() => _share.Rename("old", "new"));
     }
 
     #endregion
@@ -609,7 +609,7 @@ public class SmbShareTests
         var share = new SmbShare(_mockStore.Object, new ResilienceOptions { MaxRetries = 0 }, () => parentDisposed);
         parentDisposed = true;
 
-        await Assert.ThrowsExceptionAsync<ObjectDisposedException>(
+        await Assert.ThrowsExactlyAsync<ObjectDisposedException>(
             () => share.ExistsAsync("test.txt"));
     }
 
@@ -620,7 +620,7 @@ public class SmbShareTests
         var share = new SmbShare(_mockStore.Object, new ResilienceOptions { MaxRetries = 0 }, () => parentDisposed);
         parentDisposed = true;
 
-        Assert.ThrowsException<ObjectDisposedException>(
+        Assert.ThrowsExactly<ObjectDisposedException>(
             () => share.Exists("test.txt"));
     }
 

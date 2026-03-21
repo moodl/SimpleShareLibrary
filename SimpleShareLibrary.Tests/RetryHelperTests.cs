@@ -57,7 +57,7 @@ public class RetryHelperTests
     public async Task ExecuteAsync_AuthException_DoesNotRetry()
     {
         int attempts = 0;
-        await Assert.ThrowsExceptionAsync<ShareAuthenticationException>(async () =>
+        await Assert.ThrowsExactlyAsync<ShareAuthenticationException>(async () =>
         {
             await RetryHelper.ExecuteAsync<int>(() =>
             {
@@ -73,7 +73,7 @@ public class RetryHelperTests
     public async Task ExecuteAsync_AccessDeniedException_DoesNotRetry()
     {
         int attempts = 0;
-        await Assert.ThrowsExceptionAsync<ShareAccessDeniedException>(async () =>
+        await Assert.ThrowsExactlyAsync<ShareAccessDeniedException>(async () =>
         {
             await RetryHelper.ExecuteAsync<int>(() =>
             {
@@ -89,7 +89,7 @@ public class RetryHelperTests
     public async Task ExecuteAsync_FileNotFoundException_DoesNotRetry()
     {
         int attempts = 0;
-        await Assert.ThrowsExceptionAsync<ShareFileNotFoundException>(async () =>
+        await Assert.ThrowsExactlyAsync<ShareFileNotFoundException>(async () =>
         {
             await RetryHelper.ExecuteAsync<int>(() =>
             {
@@ -105,7 +105,7 @@ public class RetryHelperTests
     public async Task ExecuteAsync_AlreadyExistsException_DoesNotRetry()
     {
         int attempts = 0;
-        await Assert.ThrowsExceptionAsync<ShareAlreadyExistsException>(async () =>
+        await Assert.ThrowsExactlyAsync<ShareAlreadyExistsException>(async () =>
         {
             await RetryHelper.ExecuteAsync<int>(() =>
             {
@@ -121,7 +121,7 @@ public class RetryHelperTests
     public async Task ExecuteAsync_AllRetriesExhausted_ThrowsLastException()
     {
         int attempts = 0;
-        var ex = await Assert.ThrowsExceptionAsync<ShareConnectionException>(async () =>
+        var ex = await Assert.ThrowsExactlyAsync<ShareConnectionException>(async () =>
         {
             await RetryHelper.ExecuteAsync<int>(() =>
             {
@@ -217,7 +217,7 @@ public class RetryHelperTests
     public void Execute_AuthException_DoesNotRetry()
     {
         int attempts = 0;
-        Assert.ThrowsException<ShareAuthenticationException>(() =>
+        Assert.ThrowsExactly<ShareAuthenticationException>(() =>
         {
             RetryHelper.Execute<int>(() =>
             {
@@ -233,7 +233,7 @@ public class RetryHelperTests
     public void Execute_AllRetriesExhausted_ThrowsLastException()
     {
         int attempts = 0;
-        Assert.ThrowsException<ShareConnectionException>(() =>
+        Assert.ThrowsExactly<ShareConnectionException>(() =>
         {
             RetryHelper.Execute<int>(() =>
             {

@@ -53,7 +53,7 @@ public class CopyMoveRenameTests
             await share.WriteAllTextAsync(dst, "existing");
 
             // Act & Assert
-            await Assert.ThrowsExceptionAsync<ShareAlreadyExistsException>(
+            await Assert.ThrowsExactlyAsync<ShareAlreadyExistsException>(
                 () => share.CopyFileAsync(src, dst, new CopyOptions { Overwrite = false }));
         }
         finally
@@ -350,7 +350,7 @@ public class CopyMoveRenameTests
         using var __ = share;
 
         // Act & Assert
-        await Assert.ThrowsExceptionAsync<ShareFileNotFoundException>(
+        await Assert.ThrowsExactlyAsync<ShareFileNotFoundException>(
             () => share.DeleteFileAsync($"nonexistent-{Guid.NewGuid()}.txt"));
     }
 
