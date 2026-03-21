@@ -125,7 +125,7 @@ public class FileReadWriteTests
             await share.WriteAllTextAsync(path, "original");
 
             // Act & Assert
-            await Assert.ThrowsExceptionAsync<ShareAlreadyExistsException>(
+            await Assert.ThrowsExactlyAsync<ShareAlreadyExistsException>(
                 () => share.WriteAllTextAsync(path, "should fail", overwrite: false));
         }
         finally
@@ -242,7 +242,7 @@ public class FileReadWriteTests
         using var __ = share;
 
         // Act & Assert
-        await Assert.ThrowsExceptionAsync<ShareFileNotFoundException>(
+        await Assert.ThrowsExactlyAsync<ShareFileNotFoundException>(
             () => share.ReadAllTextAsync("does-not-exist.txt"));
     }
 

@@ -56,7 +56,7 @@ public class SmbShareClientTests
         var status = NTStatus.STATUS_ACCESS_DENIED;
         _mockClient.Setup(c => c.ListShares(out status)).Returns(new List<string>());
 
-        await Assert.ThrowsExceptionAsync<ShareAccessDeniedException>(
+        await Assert.ThrowsExactlyAsync<ShareAccessDeniedException>(
             () => _client.ListSharesAsync());
     }
 
@@ -81,14 +81,14 @@ public class SmbShareClientTests
     [TestMethod]
     public async Task OpenShareAsync_NullShareName_ThrowsArgumentException()
     {
-        await Assert.ThrowsExceptionAsync<ArgumentException>(
+        await Assert.ThrowsExactlyAsync<ArgumentException>(
             () => _client.OpenShareAsync(null!));
     }
 
     [TestMethod]
     public async Task OpenShareAsync_EmptyShareName_ThrowsArgumentException()
     {
-        await Assert.ThrowsExceptionAsync<ArgumentException>(
+        await Assert.ThrowsExactlyAsync<ArgumentException>(
             () => _client.OpenShareAsync(""));
     }
 
@@ -99,7 +99,7 @@ public class SmbShareClientTests
         _mockClient.Setup(c => c.TreeConnect("BadShare", out status))
             .Returns((ISMBFileStore)null!);
 
-        await Assert.ThrowsExceptionAsync<ShareFileNotFoundException>(
+        await Assert.ThrowsExactlyAsync<ShareFileNotFoundException>(
             () => _client.OpenShareAsync("BadShare"));
     }
 
@@ -126,7 +126,7 @@ public class SmbShareClientTests
         var status = NTStatus.STATUS_ACCESS_DENIED;
         _mockClient.Setup(c => c.ListShares(out status)).Returns(new List<string>());
 
-        Assert.ThrowsException<ShareAccessDeniedException>(
+        Assert.ThrowsExactly<ShareAccessDeniedException>(
             () => _client.ListShares());
     }
 
@@ -151,7 +151,7 @@ public class SmbShareClientTests
     [TestMethod]
     public void OpenShare_NullShareName_ThrowsArgumentException()
     {
-        Assert.ThrowsException<ArgumentException>(
+        Assert.ThrowsExactly<ArgumentException>(
             () => _client.OpenShare(null!));
     }
 
@@ -162,7 +162,7 @@ public class SmbShareClientTests
         _mockClient.Setup(c => c.TreeConnect("BadShare", out status))
             .Returns((ISMBFileStore)null!);
 
-        Assert.ThrowsException<ShareFileNotFoundException>(
+        Assert.ThrowsExactly<ShareFileNotFoundException>(
             () => _client.OpenShare("BadShare"));
     }
 
@@ -175,7 +175,7 @@ public class SmbShareClientTests
     {
         _client.Dispose();
 
-        Assert.ThrowsException<ObjectDisposedException>(
+        Assert.ThrowsExactly<ObjectDisposedException>(
             () => _client.ListShares());
     }
 
@@ -184,7 +184,7 @@ public class SmbShareClientTests
     {
         _client.Dispose();
 
-        Assert.ThrowsException<ObjectDisposedException>(
+        Assert.ThrowsExactly<ObjectDisposedException>(
             () => _client.OpenShare("test"));
     }
 
@@ -226,7 +226,7 @@ public class SmbShareClientTests
     {
         _client.Dispose();
 
-        await Assert.ThrowsExceptionAsync<ObjectDisposedException>(
+        await Assert.ThrowsExactlyAsync<ObjectDisposedException>(
             () => _client.ListSharesAsync());
     }
 
@@ -235,7 +235,7 @@ public class SmbShareClientTests
     {
         _client.Dispose();
 
-        await Assert.ThrowsExceptionAsync<ObjectDisposedException>(
+        await Assert.ThrowsExactlyAsync<ObjectDisposedException>(
             () => _client.OpenShareAsync("test"));
     }
 
@@ -249,7 +249,7 @@ public class SmbShareClientTests
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
-        await Assert.ThrowsExceptionAsync<TaskCanceledException>(
+        await Assert.ThrowsExactlyAsync<TaskCanceledException>(
             () => _client.ListSharesAsync(cts.Token));
     }
 

@@ -18,7 +18,7 @@ public class NTStatusMapperTests
     [TestMethod]
     public void ThrowOnFailure_ObjectNameNotFound_ThrowsShareFileNotFoundException()
     {
-        var ex = Assert.ThrowsException<ShareFileNotFoundException>(
+        var ex = Assert.ThrowsExactly<ShareFileNotFoundException>(
             () => NTStatusMapper.ThrowOnFailure(NTStatus.STATUS_OBJECT_NAME_NOT_FOUND, "test.txt"));
         Assert.AreEqual("test.txt", ex.Path);
     }
@@ -26,7 +26,7 @@ public class NTStatusMapperTests
     [TestMethod]
     public void ThrowOnFailure_ObjectPathNotFound_ThrowsShareDirectoryNotFoundException()
     {
-        var ex = Assert.ThrowsException<ShareDirectoryNotFoundException>(
+        var ex = Assert.ThrowsExactly<ShareDirectoryNotFoundException>(
             () => NTStatusMapper.ThrowOnFailure(NTStatus.STATUS_OBJECT_PATH_NOT_FOUND, "mydir"));
         Assert.AreEqual("mydir", ex.Path);
     }
@@ -34,7 +34,7 @@ public class NTStatusMapperTests
     [TestMethod]
     public void ThrowOnFailure_AccessDenied_ThrowsShareAccessDeniedException()
     {
-        var ex = Assert.ThrowsException<ShareAccessDeniedException>(
+        var ex = Assert.ThrowsExactly<ShareAccessDeniedException>(
             () => NTStatusMapper.ThrowOnFailure(NTStatus.STATUS_ACCESS_DENIED, "secret.txt"));
         Assert.AreEqual("secret.txt", ex.Path);
     }
@@ -42,7 +42,7 @@ public class NTStatusMapperTests
     [TestMethod]
     public void ThrowOnFailure_ObjectNameCollision_ThrowsShareAlreadyExistsException()
     {
-        var ex = Assert.ThrowsException<ShareAlreadyExistsException>(
+        var ex = Assert.ThrowsExactly<ShareAlreadyExistsException>(
             () => NTStatusMapper.ThrowOnFailure(NTStatus.STATUS_OBJECT_NAME_COLLISION, "dup.txt"));
         Assert.AreEqual("dup.txt", ex.Path);
     }
@@ -54,7 +54,7 @@ public class NTStatusMapperTests
     [DataRow(NTStatus.STATUS_ACCOUNT_LOCKED_OUT)]
     public void ThrowOnFailure_AuthStatuses_ThrowShareAuthenticationException(NTStatus status)
     {
-        Assert.ThrowsException<ShareAuthenticationException>(
+        Assert.ThrowsExactly<ShareAuthenticationException>(
             () => NTStatusMapper.ThrowOnFailure(status));
     }
 
@@ -65,7 +65,7 @@ public class NTStatusMapperTests
     [DataRow(NTStatus.STATUS_REQUEST_NOT_ACCEPTED)]
     public void ThrowOnFailure_TransientIOStatuses_ThrowShareIOException(NTStatus status)
     {
-        Assert.ThrowsException<ShareIOException>(
+        Assert.ThrowsExactly<ShareIOException>(
             () => NTStatusMapper.ThrowOnFailure(status, "file"));
     }
 
@@ -74,7 +74,7 @@ public class NTStatusMapperTests
     [DataRow(NTStatus.STATUS_DISK_FULL)]
     public void ThrowOnFailure_NonTransientStatuses_ThrowShareException(NTStatus status)
     {
-        var ex = Assert.ThrowsException<ShareException>(
+        var ex = Assert.ThrowsExactly<ShareException>(
             () => NTStatusMapper.ThrowOnFailure(status, "file"));
         Assert.IsNotInstanceOfType(ex, typeof(ShareIOException));
     }
@@ -82,14 +82,14 @@ public class NTStatusMapperTests
     [TestMethod]
     public void ThrowOnFailure_NetworkNameDeleted_ThrowsShareConnectionException()
     {
-        Assert.ThrowsException<ShareConnectionException>(
+        Assert.ThrowsExactly<ShareConnectionException>(
             () => NTStatusMapper.ThrowOnFailure(NTStatus.STATUS_NETWORK_NAME_DELETED, "file"));
     }
 
     [TestMethod]
     public void ThrowOnFailure_NoSuchFile_ThrowsShareFileNotFoundException()
     {
-        var ex = Assert.ThrowsException<ShareFileNotFoundException>(
+        var ex = Assert.ThrowsExactly<ShareFileNotFoundException>(
             () => NTStatusMapper.ThrowOnFailure(NTStatus.STATUS_NO_SUCH_FILE, "gone.txt"));
         Assert.AreEqual("gone.txt", ex.Path);
     }
@@ -97,7 +97,7 @@ public class NTStatusMapperTests
     [TestMethod]
     public void ThrowOnFailure_MediaWriteProtected_ThrowsShareAccessDeniedException()
     {
-        var ex = Assert.ThrowsException<ShareAccessDeniedException>(
+        var ex = Assert.ThrowsExactly<ShareAccessDeniedException>(
             () => NTStatusMapper.ThrowOnFailure(NTStatus.STATUS_MEDIA_WRITE_PROTECTED, "readonly.txt"));
         Assert.AreEqual("readonly.txt", ex.Path);
     }
@@ -105,7 +105,7 @@ public class NTStatusMapperTests
     [TestMethod]
     public void ThrowOnFailure_UnmappedStatus_ThrowsShareException()
     {
-        var ex = Assert.ThrowsException<ShareException>(
+        var ex = Assert.ThrowsExactly<ShareException>(
             () => NTStatusMapper.ThrowOnFailure(NTStatus.STATUS_INVALID_PARAMETER, "file"));
         Assert.IsNotInstanceOfType(ex, typeof(ShareIOException));
     }
@@ -113,7 +113,7 @@ public class NTStatusMapperTests
     [TestMethod]
     public void ThrowOnFailure_NullPath_UsesUnknown()
     {
-        var ex = Assert.ThrowsException<ShareFileNotFoundException>(
+        var ex = Assert.ThrowsExactly<ShareFileNotFoundException>(
             () => NTStatusMapper.ThrowOnFailure(NTStatus.STATUS_OBJECT_NAME_NOT_FOUND));
         Assert.AreEqual("unknown", ex.Path);
     }

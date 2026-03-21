@@ -57,7 +57,7 @@ public class SmbFileStreamTests
     public void Read_NotReadable_Throws()
     {
         using var stream = new SmbFileStream(_mockStore.Object, _handle, canRead: false, canWrite: true);
-        Assert.ThrowsException<NotSupportedException>(() => stream.Read(new byte[10], 0, 10));
+        Assert.ThrowsExactly<NotSupportedException>(() => stream.Read(new byte[10], 0, 10));
     }
 
     #endregion
@@ -90,7 +90,7 @@ public class SmbFileStreamTests
     public void Write_NotWritable_Throws()
     {
         using var stream = new SmbFileStream(_mockStore.Object, _handle, canRead: true, canWrite: false);
-        Assert.ThrowsException<NotSupportedException>(() => stream.Write(new byte[5], 0, 5));
+        Assert.ThrowsExactly<NotSupportedException>(() => stream.Write(new byte[5], 0, 5));
     }
 
     #endregion
@@ -138,7 +138,7 @@ public class SmbFileStreamTests
     public void Seek_End_Throws()
     {
         using var stream = new SmbFileStream(_mockStore.Object, _handle, canRead: true, canWrite: false);
-        Assert.ThrowsException<NotSupportedException>(() => stream.Seek(0, SeekOrigin.End));
+        Assert.ThrowsExactly<NotSupportedException>(() => stream.Seek(0, SeekOrigin.End));
     }
 
     #endregion
@@ -170,7 +170,7 @@ public class SmbFileStreamTests
         var stream = new SmbFileStream(_mockStore.Object, _handle, canRead: true, canWrite: false);
         stream.Dispose();
 
-        Assert.ThrowsException<ObjectDisposedException>(() => stream.Read(new byte[10], 0, 10));
+        Assert.ThrowsExactly<ObjectDisposedException>(() => stream.Read(new byte[10], 0, 10));
     }
 
     #endregion
@@ -188,14 +188,14 @@ public class SmbFileStreamTests
     public void Length_ThrowsNotSupported()
     {
         using var stream = new SmbFileStream(_mockStore.Object, _handle, canRead: true, canWrite: false);
-        Assert.ThrowsException<NotSupportedException>(() => _ = stream.Length);
+        Assert.ThrowsExactly<NotSupportedException>(() => _ = stream.Length);
     }
 
     [TestMethod]
     public void SetLength_ThrowsNotSupported()
     {
         using var stream = new SmbFileStream(_mockStore.Object, _handle, canRead: true, canWrite: false);
-        Assert.ThrowsException<NotSupportedException>(() => stream.SetLength(100));
+        Assert.ThrowsExactly<NotSupportedException>(() => stream.SetLength(100));
     }
 
     #endregion

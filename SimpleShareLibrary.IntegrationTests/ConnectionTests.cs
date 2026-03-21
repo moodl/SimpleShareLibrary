@@ -41,7 +41,7 @@ public class ConnectionTests
         options.Password = "WrongPassword";
 
         // Act & Assert
-        await Assert.ThrowsExceptionAsync<ShareAuthenticationException>(
+        await Assert.ThrowsExactlyAsync<ShareAuthenticationException>(
             () => factory.ConnectAsync(options));
     }
 
@@ -59,7 +59,7 @@ public class ConnectionTests
         };
 
         // Act & Assert
-        await Assert.ThrowsExceptionAsync<ShareConnectionException>(
+        await Assert.ThrowsExactlyAsync<ShareConnectionException>(
             () => factory.ConnectAsync(options));
     }
 
@@ -120,7 +120,7 @@ public class ConnectionTests
         using var client = await SmbDockerFixture.CreateConnectedClientAsync();
 
         // Act & Assert
-        await Assert.ThrowsExceptionAsync<ShareException>(
+        await Assert.ThrowsExactlyAsync<ShareException>(
             () => client.OpenShareAsync("nonexistent_share"));
     }
 
