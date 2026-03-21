@@ -17,6 +17,16 @@ public class SmbFileStreamTests
         _mockStore = new Mock<ISMBFileStore>();
         _mockStore.Setup(s => s.MaxReadSize).Returns(4096);
         _mockStore.Setup(s => s.MaxWriteSize).Returns(4096);
+        SetupFileLength(1000);
+    }
+
+    private void SetupFileLength(long length)
+    {
+        var stdInfo = new FileStandardInformation { EndOfFile = length };
+        FileInformation outInfo = stdInfo;
+        _mockStore.Setup(s => s.GetFileInformation(out outInfo, _handle,
+                FileInformationClass.FileStandardInformation))
+            .Returns(NTStatus.STATUS_SUCCESS);
     }
 
     #region Read
@@ -135,10 +145,12 @@ public class SmbFileStreamTests
     }
 
     [TestMethod]
-    public void Seek_End_Throws()
+    public void Seek_End_SeeksFromEndOfFile()
     {
         using var stream = new SmbFileStream(_mockStore.Object, _handle, canRead: true, canWrite: false);
-        Assert.ThrowsExactly<NotSupportedException>(() => stream.Seek(0, SeekOrigin.End));
+        var result = stream.Seek(-10, SeekOrigin.End);
+        Assert.AreEqual(990, result);
+        Assert.AreEqual(990, stream.Position);
     }
 
     #endregion
@@ -185,8 +197,20 @@ public class SmbFileStreamTests
     }
 
     [TestMethod]
-    public void Length_ThrowsNotSupported()
+    public void Length_ReturnsFileSize()
     {
+        using var stream = new SmbFileStream(_mockStore.Object, _handle, canRead: true, canWrite: false);
+        Assert.AreEqual(1000, stream.Length);
+    }
+
+    [TestMethod]
+    public void Length_WhenQueryFails_ThrowsNotSupported()
+    {
+        FileInformation outInfo = null!;
+        _mockStore.Setup(s => s.GetFileInformation(out outInfo, _handle,
+                FileInformationClass.FileStandardInformation))
+            .Returns(NTStatus.STATUS_NOT_SUPPORTED);
+
         using var stream = new SmbFileStream(_mockStore.Object, _handle, canRead: true, canWrite: false);
         Assert.ThrowsExactly<NotSupportedException>(() => _ = stream.Length);
     }
@@ -196,6 +220,32 @@ public class SmbFileStreamTests
     {
         using var stream = new SmbFileStream(_mockStore.Object, _handle, canRead: true, canWrite: false);
         Assert.ThrowsExactly<NotSupportedException>(() => stream.SetLength(100));
+    }
+
+    #endregion
+
+    #region Parent Disposed
+
+    [TestMethod]
+    public void Read_ParentDisposed_ThrowsObjectDisposedException()
+    {
+        bool parentDisposed = false;
+        var stream = new SmbFileStream(_mockStore.Object, _handle, canRead: true, canWrite: false, () => parentDisposed);
+        parentDisposed = true;
+
+        Assert.ThrowsExactly<ObjectDisposedException>(
+            () => stream.Read(new byte[10], 0, 10));
+    }
+
+    [TestMethod]
+    public void Write_ParentDisposed_ThrowsObjectDisposedException()
+    {
+        bool parentDisposed = false;
+        var stream = new SmbFileStream(_mockStore.Object, _handle, canRead: false, canWrite: true, () => parentDisposed);
+        parentDisposed = true;
+
+        Assert.ThrowsExactly<ObjectDisposedException>(
+            () => stream.Write(new byte[5], 0, 5));
     }
 
     #endregion

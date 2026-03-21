@@ -85,6 +85,14 @@ namespace SimpleShareLibrary.Providers.Smb
         /// </summary>
         private IShareClient ConnectCore(ConnectionOptions options, ResilienceOptions resilience)
         {
+            bool isAnonymous = options.Username is null && options.Password is null;
+            if (!isAnonymous && (options.Username is null || options.Password is null))
+            {
+                throw new ArgumentException(
+                    "Both Username and Password must be provided, or both must be null for anonymous/guest access.",
+                    nameof(options));
+            }
+
             int port = options.Port;
             bool useCustomPort = port != DefaultSmbPort;
 

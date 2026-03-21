@@ -13,10 +13,18 @@ namespace SimpleShareLibrary
         /// <summary>The authentication domain. Defaults to empty (no domain).</summary>
         public string Domain { get; set; } = string.Empty;
 
-        /// <summary>The username for authentication. Null for anonymous/guest access.</summary>
+        /// <summary>
+        /// The username for authentication.
+        /// Set both <see cref="Username"/> and <see cref="Password"/> to <c>null</c> for anonymous/guest access.
+        /// Providing only one of the two is not supported and will throw <see cref="ArgumentException"/>.
+        /// </summary>
         public string? Username { get; set; }
 
-        /// <summary>The password for authentication. Null for anonymous/guest access.</summary>
+        /// <summary>
+        /// The password for authentication.
+        /// Set both <see cref="Username"/> and <see cref="Password"/> to <c>null</c> for anonymous/guest access.
+        /// Providing only one of the two is not supported and will throw <see cref="ArgumentException"/>.
+        /// </summary>
         public string? Password { get; set; }
 
         /// <summary>The port to connect on. Defaults to 445 for SMB.</summary>

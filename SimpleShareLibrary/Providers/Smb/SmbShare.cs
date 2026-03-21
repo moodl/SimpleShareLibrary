@@ -21,6 +21,7 @@ namespace SimpleShareLibrary.Providers.Smb
 
         private readonly ISMBFileStore _fileStore;
         private readonly ResilienceOptions _resilience;
+        private readonly Func<bool>? _isParentDisposed;
         private bool _disposed;
 
         #endregion
@@ -30,10 +31,12 @@ namespace SimpleShareLibrary.Providers.Smb
         /// <summary>Initializes a new instance wrapping the given SMB file store.</summary>
         /// <param name="fileStore">The SMB file store to operate on.</param>
         /// <param name="resilience">Retry and timeout settings. Uses defaults if <c>null</c>.</param>
-        internal SmbShare(ISMBFileStore fileStore, ResilienceOptions? resilience = null)
+        /// <param name="isParentDisposed">Optional callback to check if the parent client has been disposed.</param>
+        internal SmbShare(ISMBFileStore fileStore, ResilienceOptions? resilience = null, Func<bool>? isParentDisposed = null)
         {
             _fileStore = fileStore ?? throw new ArgumentNullException(nameof(fileStore));
             _resilience = resilience ?? new ResilienceOptions();
+            _isParentDisposed = isParentDisposed;
         }
 
         #endregion
@@ -503,7 +506,8 @@ namespace SimpleShareLibrary.Providers.Smb
 
             NTStatusMapper.ThrowOnFailure(status, normalizedPath);
 
-            return new SmbFileStream(_fileStore, handle, true, false);
+            return new SmbFileStream(_fileStore, handle, true, false,
+                () => _disposed || (_isParentDisposed?.Invoke() == true));
         }
 
         /// <summary>
@@ -527,7 +531,8 @@ namespace SimpleShareLibrary.Providers.Smb
 
             NTStatusMapper.ThrowOnFailure(status, normalizedPath);
 
-            return new SmbFileStream(_fileStore, handle, false, true);
+            return new SmbFileStream(_fileStore, handle, false, true,
+                () => _disposed || (_isParentDisposed?.Invoke() == true));
         }
 
         /// <summary>
@@ -1453,6 +1458,9 @@ namespace SimpleShareLibrary.Providers.Smb
         {
             if (_disposed)
                 throw new ObjectDisposedException(nameof(SmbShare));
+            if (_isParentDisposed?.Invoke() == true)
+                throw new ObjectDisposedException(nameof(SmbShareClient),
+                    "The parent client has been disposed.");
         }
 
         #endregion
