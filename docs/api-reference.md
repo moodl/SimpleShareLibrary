@@ -9,8 +9,12 @@ Static factory for creating protocol-specific client factories.
 ```csharp
 public static class ShareClientFactory
 {
-    // Creates an SMB-backed factory (SMB2/SMB3 via SMBLibrary)
-    public static IShareClientFactory CreateSmb();
+    // Connect to an SMB share directly (recommended)
+    public static Task<IShareClient> ConnectSmbAsync(ConnectionOptions options, CancellationToken ct = default);
+    public static IShareClient ConnectSmb(ConnectionOptions options);
+
+    // Creates an SMB-backed factory (deprecated — use ConnectSmbAsync/ConnectSmb instead)
+    [Obsolete] public static IShareClientFactory CreateSmb();
 }
 ```
 

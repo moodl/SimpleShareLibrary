@@ -15,8 +15,6 @@ dotnet add package SimpleShareLibrary
 ### Connect and read a file
 
 ```csharp
-var factory = ShareClientFactory.CreateSmb();
-
 var options = new ConnectionOptions
 {
     Host = "192.168.1.100",
@@ -24,7 +22,7 @@ var options = new ConnectionOptions
     Password = "password"
 };
 
-using var client = await factory.ConnectAsync(options);
+using var client = await ShareClientFactory.ConnectSmbAsync(options);
 using var share = await client.OpenShareAsync("Documents");
 
 string content = await share.ReadAllTextAsync("report.txt");

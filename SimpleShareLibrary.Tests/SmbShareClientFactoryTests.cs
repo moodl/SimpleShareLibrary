@@ -295,4 +295,120 @@ public class SmbShareClientFactoryTests
     }
 
     #endregion
+
+    #region Anonymous/Guest Access
+
+    [TestMethod]
+    public async Task ConnectAsync_BothCredentialsNull_AnonymousLogin()
+    {
+        var mockClient = new Mock<ISMBClient>();
+        mockClient.Setup(c => c.Connect(It.IsAny<string>(), SMBTransportType.DirectTCPTransport)).Returns(true);
+        mockClient.Setup(c => c.Login(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Returns(NTStatus.STATUS_SUCCESS);
+        mockClient.Setup(c => c.IsConnected).Returns(true);
+
+        var factory = new SmbShareClientFactory(() => mockClient.Object);
+        var options = new ConnectionOptions
+        {
+            Host = "server1",
+            Username = null,
+            Password = null,
+            Resilience = new ResilienceOptions { MaxRetries = 0 }
+        };
+
+        var client = await factory.ConnectAsync(options);
+
+        Assert.IsNotNull(client);
+        mockClient.Verify(c => c.Login(string.Empty, string.Empty, string.Empty), Times.Once);
+    }
+
+    [TestMethod]
+    public async Task ConnectAsync_OnlyUsernameNull_ThrowsArgumentException()
+    {
+        var factory = new SmbShareClientFactory(() => new Mock<ISMBClient>().Object);
+        var options = new ConnectionOptions
+        {
+            Host = "server1",
+            Username = null,
+            Password = "pass",
+            Resilience = new ResilienceOptions { MaxRetries = 0 }
+        };
+
+        await Assert.ThrowsExceptionAsync<ArgumentException>(
+            () => factory.ConnectAsync(options));
+    }
+
+    [TestMethod]
+    public async Task ConnectAsync_OnlyPasswordNull_ThrowsArgumentException()
+    {
+        var factory = new SmbShareClientFactory(() => new Mock<ISMBClient>().Object);
+        var options = new ConnectionOptions
+        {
+            Host = "server1",
+            Username = "user",
+            Password = null,
+            Resilience = new ResilienceOptions { MaxRetries = 0 }
+        };
+
+        await Assert.ThrowsExceptionAsync<ArgumentException>(
+            () => factory.ConnectAsync(options));
+    }
+
+    [TestMethod]
+    public void Connect_BothCredentialsNull_AnonymousLogin()
+    {
+        var mockClient = new Mock<ISMBClient>();
+        mockClient.Setup(c => c.Connect(It.IsAny<string>(), SMBTransportType.DirectTCPTransport)).Returns(true);
+        mockClient.Setup(c => c.Login(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Returns(NTStatus.STATUS_SUCCESS);
+        mockClient.Setup(c => c.IsConnected).Returns(true);
+
+        var factory = new SmbShareClientFactory(() => mockClient.Object);
+        var options = new ConnectionOptions
+        {
+            Host = "server1",
+            Username = null,
+            Password = null,
+            Resilience = new ResilienceOptions { MaxRetries = 0 }
+        };
+
+        var client = factory.Connect(options);
+
+        Assert.IsNotNull(client);
+        mockClient.Verify(c => c.Login(string.Empty, string.Empty, string.Empty), Times.Once);
+    }
+
+    [TestMethod]
+    public void Connect_OnlyUsernameNull_ThrowsArgumentException()
+    {
+        var factory = new SmbShareClientFactory(() => new Mock<ISMBClient>().Object);
+        var options = new ConnectionOptions
+        {
+            Host = "server1",
+            Username = null,
+            Password = "pass",
+            Resilience = new ResilienceOptions { MaxRetries = 0 }
+        };
+
+        Assert.ThrowsException<ArgumentException>(
+            () => factory.Connect(options));
+    }
+
+    [TestMethod]
+    public void Connect_OnlyPasswordNull_ThrowsArgumentException()
+    {
+        var factory = new SmbShareClientFactory(() => new Mock<ISMBClient>().Object);
+        var options = new ConnectionOptions
+        {
+            Host = "server1",
+            Username = "user",
+            Password = null,
+            Resilience = new ResilienceOptions { MaxRetries = 0 }
+        };
+
+        Assert.ThrowsException<ArgumentException>(
+            () => factory.Connect(options));
+    }
+
+    #endregion
 }

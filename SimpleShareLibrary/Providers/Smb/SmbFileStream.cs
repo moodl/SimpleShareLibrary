@@ -19,7 +19,9 @@ namespace SimpleShareLibrary.Providers.Smb
         private readonly bool _canWrite;
         private readonly int _maxReadSize;
         private readonly int _maxWriteSize;
+        private readonly Func<bool>? _isParentDisposed;
         private long _position;
+        private long _length;
         private bool _disposed;
 
         #endregion
@@ -31,7 +33,8 @@ namespace SimpleShareLibrary.Providers.Smb
         /// <param name="handle">The open file handle.</param>
         /// <param name="canRead">Whether the stream supports reading.</param>
         /// <param name="canWrite">Whether the stream supports writing.</param>
-        internal SmbFileStream(ISMBFileStore fileStore, object handle, bool canRead, bool canWrite)
+        /// <param name="isParentDisposed">Optional callback to check if the parent share or client has been disposed.</param>
+        internal SmbFileStream(ISMBFileStore fileStore, object handle, bool canRead, bool canWrite, Func<bool>? isParentDisposed = null)
         {
             _fileStore = fileStore ?? throw new ArgumentNullException(nameof(fileStore));
             _handle = handle ?? throw new ArgumentNullException(nameof(handle));
@@ -39,7 +42,9 @@ namespace SimpleShareLibrary.Providers.Smb
             _canWrite = canWrite;
             _maxReadSize = (int)fileStore.MaxReadSize;
             _maxWriteSize = (int)fileStore.MaxWriteSize;
+            _isParentDisposed = isParentDisposed;
             _position = 0;
+            _length = QueryFileLength();
         }
 
         #endregion
@@ -56,7 +61,16 @@ namespace SimpleShareLibrary.Providers.Smb
         public override bool CanSeek => true;
 
         /// <inheritdoc />
-        public override long Length => throw new NotSupportedException("SMB streams do not support Length.");
+        public override long Length
+        {
+            get
+            {
+                ThrowIfDisposed();
+                if (_length < 0)
+                    throw new NotSupportedException("File length could not be determined.");
+                return _length;
+            }
+        }
 
         /// <inheritdoc />
         public override long Position
@@ -126,6 +140,9 @@ namespace SimpleShareLibrary.Providers.Smb
                 totalWritten += bytesWritten;
                 _position += bytesWritten;
             }
+
+            if (_length >= 0)
+                _length = Math.Max(_length, _position);
         }
 
         /// <inheritdoc />
@@ -141,7 +158,10 @@ namespace SimpleShareLibrary.Providers.Smb
                     _position += offset;
                     break;
                 case SeekOrigin.End:
-                    throw new NotSupportedException("SeekOrigin.End is not supported for SMB streams.");
+                    if (_length < 0)
+                        throw new NotSupportedException("SeekOrigin.End requires known file length.");
+                    _position = _length + offset;
+                    break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(origin));
             }
@@ -187,6 +207,34 @@ namespace SimpleShareLibrary.Providers.Smb
         {
             if (_disposed)
                 throw new ObjectDisposedException(nameof(SmbFileStream));
+            if (_isParentDisposed?.Invoke() == true)
+                throw new ObjectDisposedException(nameof(SmbShare),
+                    "The parent share or client has been disposed.");
+        }
+
+        /// <summary>
+        /// Queries the file length from the SMB server using the already-open handle.
+        /// Returns -1 if the query fails (length will be unavailable).
+        /// </summary>
+        private long QueryFileLength()
+        {
+            try
+            {
+                var status = _fileStore.GetFileInformation(
+                    out FileInformation info, _handle,
+                    FileInformationClass.FileStandardInformation);
+
+                if (status == NTStatus.STATUS_SUCCESS && info is FileStandardInformation stdInfo)
+                {
+                    return stdInfo.EndOfFile;
+                }
+            }
+            catch
+            {
+                // Swallow — length simply won't be available
+            }
+
+            return -1;
         }
 
         #endregion

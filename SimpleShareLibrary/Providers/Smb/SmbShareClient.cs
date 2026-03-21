@@ -68,7 +68,7 @@ namespace SimpleShareLibrary.Providers.Smb
                 var fileStore = _client.TreeConnect(shareName, out NTStatus status);
                 NTStatusMapper.ThrowOnFailure(status, shareName);
 
-                return (IShare)new SmbShare(fileStore, _resilience);
+                return (IShare)new SmbShare(fileStore, _resilience, () => _disposed);
             }, ct);
         }
 
@@ -94,7 +94,7 @@ namespace SimpleShareLibrary.Providers.Smb
             var fileStore = _client.TreeConnect(shareName, out NTStatus status);
             NTStatusMapper.ThrowOnFailure(status, shareName);
 
-            return new SmbShare(fileStore, _resilience);
+            return new SmbShare(fileStore, _resilience, () => _disposed);
         }
 
         #endregion

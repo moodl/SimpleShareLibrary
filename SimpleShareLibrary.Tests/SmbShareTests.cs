@@ -600,6 +600,32 @@ public class SmbShareTests
 
     #endregion
 
+    #region Parent Disposed
+
+    [TestMethod]
+    public async Task ExistsAsync_ParentDisposed_ThrowsObjectDisposedException()
+    {
+        bool parentDisposed = false;
+        var share = new SmbShare(_mockStore.Object, new ResilienceOptions { MaxRetries = 0 }, () => parentDisposed);
+        parentDisposed = true;
+
+        await Assert.ThrowsExceptionAsync<ObjectDisposedException>(
+            () => share.ExistsAsync("test.txt"));
+    }
+
+    [TestMethod]
+    public void Exists_ParentDisposed_ThrowsObjectDisposedException()
+    {
+        bool parentDisposed = false;
+        var share = new SmbShare(_mockStore.Object, new ResilienceOptions { MaxRetries = 0 }, () => parentDisposed);
+        parentDisposed = true;
+
+        Assert.ThrowsException<ObjectDisposedException>(
+            () => share.Exists("test.txt"));
+    }
+
+    #endregion
+
     #region Helpers
 
     private void SetupCreateFileSuccess()
